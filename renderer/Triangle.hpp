@@ -111,6 +111,8 @@ public:
     //Bounds3 bounding_box;
     //BVHAccel* bvh;
 
+    MeshTriangle(int i){}
+
     MeshTriangle(const std::string& filename, Material *mt = new Material())
     {
         m = mt;
@@ -150,6 +152,20 @@ public:
             area += tri.area;
         }
         //bvh = new BVHAccel(ptrs);
+    }
+
+    MeshTriangle(const Vector3f* verts, const unsigned& numTris, Material* mt)
+    {
+        m = mt;
+        numTriangles = numTris;
+
+        for(int i=0;i<numTris*3;i=i+3)
+            triangles.emplace_back(Triangle(verts[i], verts[i + 1], verts[i + 2], mt));
+        
+        for (auto& tri : triangles)
+        {
+            area += tri.area;
+        }
     }
 
     bool intersectOrNot(const Ray& ray) override
@@ -201,4 +217,13 @@ public:
     //Bounds3 getBounds() { return Bounds3(); }
     bool hasEmit() { return m->hasEmission(); }
     float getArea() { return area; }
+
+    bool addValue (const MeshTriangle& meshTri)
+    { 
+        numTriangles = meshTri.numTriangles;
+        triangles = meshTri.triangles;
+        area = meshTri.area;
+        m = meshTri.m;
+        return 0; 
+    }
 };
