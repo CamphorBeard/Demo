@@ -1,6 +1,7 @@
 #include "Renderer.hpp"
 #include "Scene.hpp"
 #include "Triangle.hpp"
+#include "OBJ_Loader.hpp"
 #include <chrono>
 #include <Eigen>
 
@@ -19,36 +20,51 @@ int main(int argc, const char** argv)
     Material* light = new Material(Vector3f(47.8348f, 38.5664f, 31.0808f));
     light->Kd = Vector3f(0.65f, 0.65f, 0.65f);
 
-    //cornellbox scene
-    Vector3f vertsFloor[18] = { {552.8,0.0,0.0}, {0.0,0.0,0.0}, {0.0,0.0,559.2},
-                                {0.0,0.0,559.2}, {549.6,0.0,559.2}, {552.8,0.0,0.0},
-                                {556.0,548.8,0.0}, {556.0,548.8,559.2}, {0.0,548.8,559.2},
-                                {0.0,548.8,559.2}, {0.0,548.8,0.0}, {556.0,548.8,0.0},
-                                {549.6,0.0,559.2}, {0.0,0.0,559.2}, {0.0,548.8,559.2},
-                                {0.0,548.8,559.2}, {556.0,548.8,559.2}, {549.6,0.0,559.2}, };
-    MeshTriangle floor(vertsFloor, 6, white);
-    Vector3f vertsLeft[6] = { {552.8,0.0,0.0}, {549.6,0.0,559.2}, {556.0,548.8,559.2},
-                              {552.8,0.0,0.0}, {556.0,548.8,559.2}, {556.0,548.8,0.0} };
-    MeshTriangle left(vertsLeft, 2, red);
-    Vector3f vertsRight[6] = { {0.0,0.0,559.2}, {0.0,  0.0,0.0}, {0.0,548.8,  0.0},
-                               {0.0,0.0,559.2}, {0.0,548.8,0.0}, {0.0,548.8,559.2} };
-    MeshTriangle right(vertsRight, 2, green);
-    Vector3f vertsLight[6] = { {343.0,548.7,227.0}, {343.0,548.7,332.0}, {213.0,548.7,332.0},
-                               {343.0,548.7,227.0}, {213.0,548.7,332.0}, {213.0,548.7,227.0} };
-    MeshTriangle light_(vertsLight, 2, light);
+    //cornellBox scene
+    Vector3f v0{ 1,1,1 }, v1{ -1,1,1 }, v2{ -1,1,-1 }, v3{ 1,1,-1 },
+             v4{ 1,-1,1 }, v5{ -1,-1,1 }, v6{ -1,-1,-1 }, v7{ 1,-1,-1 };
 
-    MeshTriangle objFile(0);  //solve Debug Error: abort() has been called
+    std::vector<Vector3f> vertsFloor{ v0, v2, v3, v0, v1, v2,    //top
+                                      v4, v7, v6, v4, v6, v5,    //bottom
+                                      v2, v7, v3, v2, v6, v7 };  //back
+    MeshTriangle floor(vertsFloor, 6, white);
+    std::vector<Vector3f> vertsLeft{ v1, v5, v2, v6, v2, v5 };
+    MeshTriangle left(vertsLeft, 2, red);
+    std::vector<Vector3f> vertsRight{ v0, v3, v4, v3, v7, v4 };
+    MeshTriangle right(vertsRight, 2, green);
+    std::vector<Vector3f> vertsLight{ v0, v2, v3, v0, v1, v2 };
+    MeshTriangle meshLight(vertsLight, 2, light);
+
+    scene.addLight(meshLight);
+    scene.addCornellBox(left);
+    scene.addCornellBox(right);
+    scene.addCornellBox(floor);
+
+    MeshTriangle inputObject;  //solve Debug Error: abort() has been called
     if (argc >= 2)  //using command line add object
     {
-        objFile.addValue(MeshTriangle(std::string(argv[1]), white));  //E:/models/cornellbox/shortbox.obj
-        scene.Add(&objFile);
+        objl::Loader Loader;
+        Loader.LoadFile(std::string(argv[1]));  //E:/models/cornellbox/shortbox.obj
+        std::vector<Vector3f> vertsObject;
+        unsigned triNumber = 0;
+        boundingBox bbx;
+        for (auto mesh : Loader.LoadedMeshes)  //iterate all object meshes
+        {
+            triNumber += mesh.Vertices.size() / 3;  //only fit for triangle mesh
+            for (int i = 0; i < mesh.Vertices.size(); i++)  //iterate all mesh vertices
+            {
+                vertsObject.push_back(Vector3f(mesh.Vertices[i].Position.X, mesh.Vertices[i].Position.Y, mesh.Vertices[i].Position.Z));
+                bbx.pointMin = Vector3f(std::min(bbx.pointMin.x(), mesh.Vertices[i].Position.X),
+                                        std::min(bbx.pointMin.y(), mesh.Vertices[i].Position.Y),
+                                        std::min(bbx.pointMin.z(), mesh.Vertices[i].Position.Z));
+                bbx.pointMax = Vector3f(std::max(bbx.pointMax.x(), mesh.Vertices[i].Position.X),
+                                        std::max(bbx.pointMax.y(), mesh.Vertices[i].Position.Y),
+                                        std::max(bbx.pointMax.z(), mesh.Vertices[i].Position.Z));
+            }
+        }
+        inputObject = MeshTriangle(vertsObject, triNumber, white);
+        scene.addObjectInBox(inputObject, bbx);
     }
-    
-    scene.Add(&light_);
-    scene.Add(&left);
-    scene.Add(&right);
-    scene.Add(&floor);
-    //scene.buildBVH();
 
     Renderer r;
     auto start = std::chrono::system_clock::now();

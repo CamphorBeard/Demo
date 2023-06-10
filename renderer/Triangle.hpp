@@ -5,7 +5,7 @@
 #include <random>
 #include <Eigen>
 #include "Object.hpp"
-#include "OBJ_Loader.hpp"
+//#include "OBJ_Loader.hpp"  //error LNK2005 LNK1169
 #include "Material.hpp"
 #include "global.hpp"
 //#include "BVH.hpp"
@@ -111,50 +111,9 @@ public:
     //Bounds3 bounding_box;
     //BVHAccel* bvh;
 
-    MeshTriangle(int i){}
+    MeshTriangle(){}
 
-    MeshTriangle(const std::string& filename, Material *mt = new Material())
-    {
-        m = mt;
-        
-        //Vector3f min_vert = Vector3f{ std::numeric_limits<float>::infinity(),
-        //                              std::numeric_limits<float>::infinity(),
-        //                              std::numeric_limits<float>::infinity() };
-        //Vector3f max_vert = Vector3f{ -std::numeric_limits<float>::infinity(),
-        //                              -std::numeric_limits<float>::infinity(),
-        //                              -std::numeric_limits<float>::infinity() };
-
-        objl::Loader loader;
-        loader.LoadFile(filename);
-        assert(loader.LoadedMeshes.size() == 1);
-        auto mesh = loader.LoadedMeshes[0];
-        for (int i = 0; i < mesh.Vertices.size(); i += 3)
-        {
-            std::array<Vector3f, 3> face_vertices;
-            for (int j = 0; j < 3; j++)
-            {
-                auto vert = Vector3f(mesh.Vertices[i + j].Position.X, mesh.Vertices[i + j].Position.Y, mesh.Vertices[i + j].Position.Z);
-                face_vertices[j] = vert;
-
-                //min_vert = Vector3f(std::min(min_vert.x(), vert.x()), std::min(min_vert.y(), vert.y()), std::min(min_vert.z(), vert.z()));
-                //max_vert = Vector3f(std::max(max_vert.x(), vert.x()), std::max(max_vert.y(), vert.y()), std::max(max_vert.z(), vert.z()));
-            }
-            triangles.emplace_back(Triangle(face_vertices[0], face_vertices[1], face_vertices[2], mt));
-            numTriangles++;
-        }
-
-        //bounding_box = Bounds3(min_vert, max_vert);
-        
-        //std::vector<Object*> ptrs;
-        for (auto& tri : triangles)
-        {
-            //ptrs.push_back(&tri);
-            area += tri.area;
-        }
-        //bvh = new BVHAccel(ptrs);
-    }
-
-    MeshTriangle(const Vector3f* verts, const unsigned& numTris, Material* mt)
+    MeshTriangle(const std::vector<Vector3f>& verts, const unsigned& numTris, Material* mt)
     {
         m = mt;
         numTriangles = numTris;
@@ -217,13 +176,4 @@ public:
     //Bounds3 getBounds() { return Bounds3(); }
     bool hasEmit() { return m->hasEmission(); }
     float getArea() { return area; }
-
-    bool addValue (const MeshTriangle& meshTri)
-    { 
-        numTriangles = meshTri.numTriangles;
-        triangles = meshTri.triangles;
-        area = meshTri.area;
-        m = meshTri.m;
-        return 0; 
-    }
 };

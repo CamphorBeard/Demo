@@ -9,6 +9,10 @@
 extern const float  EPSILON;
 const float kInfinity = std::numeric_limits<float>::max();
 
+inline Eigen::Vector4f vec3ToVec4(Eigen::Vector3f v) { return Eigen::Vector4f(v.x(), v.y(), v.z(), 1.0f); }
+
+inline Eigen::Vector3f vec4ToVec3(Eigen::Vector4f v) { return Eigen::Vector3f(v.x(), v.y(), v.z()); }
+
 inline float clamp(const float& lo, const float& hi, const float& v) { return std::max(lo, std::min(hi, v)); }
 
 inline  bool solveQuadratic(const float &a, const float &b, const float &c, float &x0, float &x1)

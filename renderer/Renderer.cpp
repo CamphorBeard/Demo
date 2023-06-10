@@ -5,47 +5,47 @@
 
 using Eigen::Vector3f;
 
-inline float deg2rad(const float& deg) { return deg * M_PI / 180.0; }
-
 inline unsigned getPixelIndex(const unsigned& i, const unsigned& j, const unsigned& width) { return j * width + i; }
 
 const float EPSILON = 0.00001;
 
 void Renderer::Render(const Scene& scene)
 {
-    std::vector<Vector3f> framebuffer(scene.width * scene.height);
+    std::vector<Vector3f> framebuffer(scene.screenWidth * scene.screenHeight);
 
-    Vector3f eye_pos(278, 273, -800);  //look at ray tracing direction
-    float scale = tan(deg2rad(scene.fov * 0.5));
-    float distance = (scene.height / 2.0) / scale;
+    //scene cornellBox center at coordinates origin,camera set on z aies look at -z
+    float eyeToBoxFront = (scene.boxSize / 2.0) / tan(scene.fov / 2.0);
+    Vector3f eyePosition(0, 0, scene.boxSize / 2.0 + eyeToBoxFront);
+    float eyeToScreen = (scene.screenHeight / 2.0) / tan(scene.fov / 2.0);
     
     int spp = 6;  // change the spp value to change sample ammount
     std::cout << "SPP: " << spp << "\n";
     int m = 0;
-    for (uint32_t j = 0; j < scene.height; ++j)
+    for (uint32_t j = 0; j < scene.screenHeight; ++j)
     {
-        for (uint32_t i = 0; i < scene.width; ++i)
+        for (uint32_t i = 0; i < scene.screenWidth; ++i)
         {
             // generate primary ray direction,get different diffuse directions at same intersection
-            float x = eye_pos.x() + scene.width / 2.0 - i - 0.5;
-            float y = eye_pos.y() + scene.height / 2.0 - j - 0.5;
-            float z = eye_pos.z() + distance;
-            Vector3f ijposition{ x,y,z };
-            Vector3f dir = (ijposition - eye_pos).normalized();
+            float x = eyePosition.x() - scene.screenWidth / 2.0 + i + 0.5;
+            float y = eyePosition.y() + scene.screenHeight / 2.0 - j - 0.5;
+            float z = eyePosition.z() - eyeToScreen;
+
+            Vector3f ijPosition{ x,y,z };  //screen pixel(i,j)'s coordinates
+            Vector3f dir = (ijPosition - eyePosition).normalized();
             
             framebuffer[m] = Vector3f(0.0f, 0.0f, 0.0f);
             for (int k = 0; k < spp; k++)
-                framebuffer[m] += scene.castRay(Ray(eye_pos, dir), 0) / spp;  //average each sample's radiance
+                framebuffer[m] += scene.castRay(Ray(eyePosition, dir)) / spp;  //average each sample's radiance
             m++;
         }
-        UpdateProgress(j / (float)scene.height);
+        UpdateProgress(j / (float)scene.screenHeight);
     }
     UpdateProgress(1.f);
 
     // save framebuffer to file
     FILE* fp = fopen("binary.ppm", "wb");
-    (void)fprintf(fp, "P6\n%d %d\n255\n", scene.width, scene.height);
-    for (auto i = 0; i < scene.height * scene.width; ++i)
+    (void)fprintf(fp, "P6\n%d %d\n255\n", scene.screenWidth, scene.screenHeight);
+    for (auto i = 0; i < scene.screenHeight * scene.screenWidth; ++i)
     {
         static unsigned char color[3];
         color[0] = (unsigned char)(255 * std::pow(clamp(0, 1, framebuffer[i].x()), 0.6f));

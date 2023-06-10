@@ -5,27 +5,45 @@
 #include "Object.hpp"
 #include "Intersection.hpp"
 #include "Ray.hpp"
+#include "Triangle.hpp"
 //#include "BVH.hpp"
 
 using Eigen::Vector3f;
 
+struct boundingBox
+{
+    Vector3f pointMin{ 0.0,0.0,0.0 };
+    Vector3f pointMax{ 0.0,0.0,0.0 };
+
+    void updateValue()
+    {
+        pointMin = Vector3f(0.0, 0.0, 0.0);
+        pointMax = Vector3f(0.0, 0.0, 0.0);
+    }
+};
+
 class Scene
 {
 public:
-    unsigned width = 1280;
-    unsigned height = 960;
-    double fov = 40;
+    unsigned screenWidth = 1280;
+    unsigned screenHeight = 960;
+    double fov = 40.0 * M_PI / 180.0;
     Vector3f backgroundColor = Vector3f(0.235294f, 0.67451f, 0.843137f);
-    int maxDepth = 1;
 
     std::vector<Object* > objects;
     //BVHAccel* bvh;
 
     float RussianRoulette = 0.8f;
 
-    Scene(int w, int h) : width(w), height(h){}
+    float boxSize = 550.0;  //cornellBox boxSize*boxSize
+    float ratioObjectBox = 0.3;  //object boundingBox longest length/box length
+
+    Scene(int w, int h) : screenWidth(w), screenHeight(h){}
 
     void Add(Object *object) { objects.push_back(object); }
+    void addLight(MeshTriangle& light);
+    void addCornellBox(MeshTriangle& box);
+    void addObjectInBox(MeshTriangle& object, boundingBox& bbx);
 
     const std::vector<Object*>& get_objects() const { return objects; }
 
@@ -37,5 +55,5 @@ public:
 
     Intersection getIntersection(const Ray& ray) const;
 
-    Vector3f castRay(const Ray &ray, int depth) const;
+    Vector3f castRay(const Ray &ray) const;
 };
