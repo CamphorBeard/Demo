@@ -12,12 +12,12 @@ using Eigen::Vector3f;
 
 struct boundingBox
 {
-    Vector3f pointMin{ 0.0,0.0,0.0 };
+    Vector3f pointMin{ INFINITY,INFINITY,INFINITY };
     Vector3f pointMax{ 0.0,0.0,0.0 };
 
     void updateValue()
     {
-        pointMin = Vector3f(0.0, 0.0, 0.0);
+        pointMin = Vector3f(INFINITY, INFINITY, INFINITY);
         pointMax = Vector3f(0.0, 0.0, 0.0);
     }
 };
@@ -36,7 +36,7 @@ public:
     float RussianRoulette = 0.8f;
 
     float boxSize = 550.0;  //cornellBox boxSize*boxSize
-    float ratioObjectBox = 0.3;  //object boundingBox longest length/box length
+    float ratioObjectBox = 0.5;  //object boundingBox longest length/box length
 
     Scene(int w, int h) : screenWidth(w), screenHeight(h){}
 

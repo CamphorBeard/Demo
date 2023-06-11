@@ -79,13 +79,20 @@ void Scene::addCornellBox(MeshTriangle& box)
 
 void Scene::addObjectInBox(MeshTriangle& object, boundingBox& bbx)
 {
+    //move object to origin where box setted
     translate(object, -(bbx.pointMin.x() + bbx.pointMax.x()) / 2,
                       -(bbx.pointMin.y() + bbx.pointMax.y()) / 2,
                       -(bbx.pointMin.z() + bbx.pointMax.z()) / 2);
+
+    //scale object to suitable size
     float longestLength = std::max(std::max(bbx.pointMax.x() - bbx.pointMin.x(), bbx.pointMax.y() - bbx.pointMin.y()),
                                    bbx.pointMax.z() - bbx.pointMin.z());
-    float n = (1 / longestLength) * (boxSize / 2.0) /** ratioObjectBox*/;
+    float n = (1.0 / (longestLength / 2.0)) * (boxSize / 2.0) * ratioObjectBox;
     scale(object, n, n, n);
+
+    //move object to box floor
+    float distanceToFloor = (boxSize / 2.0) - ((bbx.pointMax.y() - bbx.pointMin.y()) / 2.0) * n;
+    translate(object, 0, -distanceToFloor, 0);
     objects.push_back(&object);
 }
 
