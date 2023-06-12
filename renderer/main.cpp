@@ -9,7 +9,7 @@ using Eigen::Vector3f;
 
 int main(int argc, const char** argv)
 {
-    Scene scene(100, 100);  //350, 350  784, 784
+    Scene scene(350, 350);
 
     Material* red = new Material(Vector3f(0.0f, 0.0f, 0.0f));
     red->Kd = Vector3f(0.63f, 0.065f, 0.05f);
@@ -17,6 +17,8 @@ int main(int argc, const char** argv)
     green->Kd = Vector3f(0.14f, 0.45f, 0.091f);
     Material* white = new Material(Vector3f(0.0f, 0.0f, 0.0f));
     white->Kd = Vector3f(0.725f, 0.71f, 0.68f);
+    Material* objectMaterial = new Material(Vector3f(0.0f, 0.0f, 0.0f));
+    objectMaterial->Kd = Vector3f(0.35f, 0.39f, 1.0f);
     Material* light = new Material(Vector3f(47.8348f, 38.5664f, 31.0808f));
     light->Kd = Vector3f(0.65f, 0.65f, 0.65f);
 
@@ -35,10 +37,11 @@ int main(int argc, const char** argv)
     std::vector<Vector3f> vertsLight{ v0, v2, v3, v0, v1, v2 };
     MeshTriangle meshLight(vertsLight, 2, light);
 
-    scene.addLight(meshLight);
+    //scene.addLight(meshLight);
     scene.addCornellBox(left);
     scene.addCornellBox(right);
     scene.addCornellBox(floor);
+    scene.addLight(meshLight);
 
     MeshTriangle inputObject;  //solve Debug Error: abort() has been called
     if (argc >= 2)  //using command line add object
@@ -62,13 +65,16 @@ int main(int argc, const char** argv)
                                         std::max(bbx.pointMax.z(), mesh.Vertices[i].Position.Z));
             }
         }
-        inputObject = MeshTriangle(vertsObject, triNumber, white);
+        inputObject = MeshTriangle(vertsObject, triNumber, objectMaterial);
         scene.addObjectInBox(inputObject, bbx);
     }
 
-    Renderer r;
+    Renderer renderer;
+
+    renderer.rasterizationRender(scene);
+
     auto start = std::chrono::system_clock::now();
-    r.Render(scene);
+    renderer.pathTracingRender(scene);
     auto stop = std::chrono::system_clock::now();
     std::cout << "Render complete: \n";
     std::cout << "Time taken: " << std::chrono::duration_cast<std::chrono::hours>(stop - start).count() << " hours\n";

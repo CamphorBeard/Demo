@@ -30,13 +30,15 @@ public:
     double fov = 40.0 * M_PI / 180.0;
     Vector3f backgroundColor = Vector3f(0.235294f, 0.67451f, 0.843137f);
 
-    std::vector<Object* > objects;
+    std::vector<Object* > objects;  //save scene objects for path tracing
     //BVHAccel* bvh;
 
     float RussianRoulette = 0.8f;
 
-    float boxSize = 550.0;  //cornellBox boxSize*boxSize
+    float boxSize = 200.0;  //cornellBox boxSize*boxSize
     float ratioObjectBox = 0.5;  //object boundingBox longest length/box length
+
+    std::vector<MeshTriangle > meshTris;  //save scene objects for rasterization
 
     Scene(int w, int h) : screenWidth(w), screenHeight(h){}
 
@@ -45,7 +47,8 @@ public:
     void addCornellBox(MeshTriangle& box);
     void addObjectInBox(MeshTriangle& object, boundingBox& bbx);
 
-    const std::vector<Object*>& get_objects() const { return objects; }
+    void viewTransform(MeshTriangle& meshTri, Vector3f eyePosition);
+    void projectTransform(MeshTriangle& meshTri);
 
     //void buildBVH();
 
@@ -55,5 +58,5 @@ public:
 
     Intersection getIntersection(const Ray& ray) const;
 
-    Vector3f castRay(const Ray &ray) const;
+    Vector3f pathTracing(const Ray &ray) const;
 };

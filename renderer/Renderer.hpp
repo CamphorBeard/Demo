@@ -5,5 +5,7 @@
 class Renderer
 {
 public:
-    void Render(const Scene& scene);
+    void rasterizationRender(Scene& scene);
+
+    void pathTracingRender(const Scene& scene);
 };

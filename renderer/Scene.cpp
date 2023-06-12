@@ -64,17 +64,84 @@ void translate(MeshTriangle& meshTri, float tx, float ty, float tz)
     }
 }
 
+void Scene::viewTransform(MeshTriangle& meshTri, Vector3f eyePosition)
+{
+    Eigen::Matrix4f viewTransformMatrix;
+    viewTransformMatrix <<
+        1, 0, 0, -eyePosition.x(),
+        0, 1, 0, -eyePosition.y(),
+        0, 0, 1, -eyePosition.z(),
+        0, 0, 0, 1;
+
+    for (unsigned i = 0; i < meshTri.numTriangles; i++)
+    {
+        Vector3f v0, v1, v2;
+        v0 = vec4ToVec3(viewTransformMatrix * vec3ToVec4(meshTri.triangles[i].v0));
+        v1 = vec4ToVec3(viewTransformMatrix * vec3ToVec4(meshTri.triangles[i].v1));
+        v2 = vec4ToVec3(viewTransformMatrix * vec3ToVec4(meshTri.triangles[i].v2));
+        Triangle triTemp(v0, v1, v2, meshTri.m);
+        meshTri.triangles[i] = triTemp;
+    }
+}
+
+void Scene::projectTransform(MeshTriangle& meshTri)
+{
+    Eigen::Matrix4f projectMatrix = Eigen::Matrix4f::Identity();
+
+    float near = -0.1;
+    float far = -((boxSize / 2.0) / tan(fov / 2.0) + boxSize) - 5;
+    float top = near * tan(fov / 2.0);  //?
+    float bottom = -top;
+    float right = -top * screenWidth / screenHeight;
+    float left = -right;
+
+    Eigen::Matrix4f perspToOrtho;
+    perspToOrtho <<
+        near, 0, 0, 0,
+        0, near, 0, 0,
+        0, 0, near + far, -near * far,
+        0, 0, 1, 0;
+
+    Eigen::Matrix4f orthoTranslate;
+    orthoTranslate <<
+        1, 0, 0, -(right + left) / 2,
+        0, 1, 0, -(top + bottom) / 2,
+        0, 0, 1, -(near + far) / 2,
+        0, 0, 0, 1;
+
+    Eigen::Matrix4f orthoScale;
+    orthoScale <<
+        2 / (right - left), 0, 0, 0,
+        0, 2 / (top - bottom), 0, 0,
+        0, 0, 2 / (near - far), 0,
+        0, 0, 0, 1;
+
+    projectMatrix = orthoScale * orthoTranslate * perspToOrtho;
+
+    for (unsigned i = 0; i < meshTri.numTriangles; i++)
+    {
+        Vector3f v0, v1, v2;
+        v0 = vec4ToVec3(projectMatrix * vec3ToVec4(meshTri.triangles[i].v0));
+        v1 = vec4ToVec3(projectMatrix * vec3ToVec4(meshTri.triangles[i].v1));
+        v2 = vec4ToVec3(projectMatrix * vec3ToVec4(meshTri.triangles[i].v2));
+        Triangle triTemp(v0, v1, v2, meshTri.m);
+        meshTri.triangles[i] = triTemp;
+    }
+}
+
 void Scene::addLight(MeshTriangle& light)
 {
     scale(light, boxSize / 2.0 / 5.0, 1, boxSize / 2.0 / 5.0);
     translate(light, 0, boxSize / 2.0 - 2.0, 0);
     objects.push_back(&light);
+    meshTris.push_back(light);
 }
 
 void Scene::addCornellBox(MeshTriangle& box)
 {
     scale(box, boxSize / 2.0, boxSize / 2.0, boxSize / 2.0);
     objects.push_back(&box);
+    meshTris.push_back(box);
 }
 
 void Scene::addObjectInBox(MeshTriangle& object, boundingBox& bbx)
@@ -94,6 +161,7 @@ void Scene::addObjectInBox(MeshTriangle& object, boundingBox& bbx)
     float distanceToFloor = (boxSize / 2.0) - ((bbx.pointMax.y() - bbx.pointMin.y()) / 2.0) * n;
     translate(object, 0, -distanceToFloor, 0);
     objects.push_back(&object);
+    meshTris.push_back(object);
 }
 
 //void Scene::buildBVH() 
@@ -136,7 +204,7 @@ Intersection Scene::getIntersection(const Ray& ray) const
     return intersection;
 }
 
-Vector3f Scene::castRay(const Ray &ray) const
+Vector3f Scene::pathTracing(const Ray &ray) const
 {
     Vector3f LOut{ 0.0, 0.0, 0.0 };
 
@@ -194,7 +262,7 @@ Vector3f Scene::castRay(const Ray &ray) const
             {
                 Vector3f wIn = secRay.direction;
                 Vector3f BRDF = intersection.m->eval(wIn, wOut, N);
-                Vector3f LIn = castRay(secRay);
+                Vector3f LIn = pathTracing(secRay);
                 float PDF = intersection.m->pdf(wIn, wOut, N);
 
                 LOut.x() += BRDF.x() * LIn.x() * (N.dot(wIn)) / PDF / RussianRoulette;
