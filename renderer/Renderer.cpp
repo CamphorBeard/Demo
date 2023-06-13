@@ -90,7 +90,7 @@ void Renderer::pathTracingRender(const Scene& scene)
     Vector3f eyePosition(0, 0, scene.boxSize / 2.0 + eyeToBoxFront);
     float eyeToScreen = (scene.screenHeight / 2.0) / tan(scene.fov / 2.0);
     
-    int spp = 3;  // change the spp value to change sample ammount
+    int spp = 1;  // change the spp value to change sample ammount
     std::cout << "SPP: " << spp << "\n";
     int m = 0;
     for (uint32_t j = 0; j < scene.screenHeight; ++j)
@@ -114,16 +114,17 @@ void Renderer::pathTracingRender(const Scene& scene)
     }
     UpdateProgress(1.f);
 
-    // save framebuffer to file
-    FILE* fp = fopen("binary.ppm", "wb");
-    (void)fprintf(fp, "P6\n%d %d\n255\n", scene.screenWidth, scene.screenHeight);
-    for (auto i = 0; i < scene.screenHeight * scene.screenWidth; ++i)
+    for (unsigned i = 0; i < framebuffer.size(); i++)
+        framebuffer[i] = framebuffer[i] * 255.0f;
+    int key = 0;
+    std::string filename = "output.ppm";
+    while (key != 27)  //esc
     {
-        static unsigned char color[3];
-        color[0] = (unsigned char)(255 * std::pow(clamp(0, 1, framebuffer[i].x()), 0.6f));
-        color[1] = (unsigned char)(255 * std::pow(clamp(0, 1, framebuffer[i].y()), 0.6f));
-        color[2] = (unsigned char)(255 * std::pow(clamp(0, 1, framebuffer[i].z()), 0.6f));
-        fwrite(color, 1, 3, fp);
+        cv::Mat image(scene.screenWidth, scene.screenHeight, CV_32FC3, framebuffer.data());
+        image.convertTo(image, CV_8UC3, 1.0f);
+        cv::cvtColor(image, image, cv::COLOR_RGB2BGR);
+        cv::imshow("image", image);
+        cv::imwrite(filename, image);
+        key = cv::waitKey(10);
     }
-    fclose(fp);
 }
