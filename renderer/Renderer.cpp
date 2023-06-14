@@ -27,62 +27,77 @@ bool insideTriangle(float x, float y, const Triangle& v)
 void Renderer::rasterizationRender(Scene& scene)
 {
     std::vector<Vector3f> frameBuffer(scene.screenWidth * scene.screenHeight);
-    for (unsigned i = 0; i < frameBuffer.size(); i++)
-        frameBuffer[i] = Vector3f(0.0, 0.0, 0.0);
     std::vector<float> depthBuffer(scene.screenWidth * scene.screenHeight);
-    for (unsigned i = 0; i < frameBuffer.size(); i++)
-        depthBuffer[i] = INFINITY;
     
     float eyeToBoxFront = (scene.boxSize / 2.0) / tan(scene.fov / 2.0);
     Vector3f eyePosition(0, 0, scene.boxSize / 2.0 + eyeToBoxFront);
 
-    //iterate all projected meshtriangles
-    for (MeshTriangle meshTri : scene.meshTris)
+    int key = 0;
+    while (key != 27)  //esc
     {
-        scene.viewTransform(meshTri, eyePosition);
-        scene.projectTransform(meshTri);
-        //for one projected meshtriangle,get all triangles belong to it
-        for (Triangle& tri : meshTri.triangles)
+        for (unsigned i = 0; i < frameBuffer.size(); i++)
+            frameBuffer[i] = Vector3f(0.0, 0.0, 0.0);
+        for (unsigned i = 0; i < frameBuffer.size(); i++)
+            depthBuffer[i] = INFINITY;
+        //iterate all projected meshtriangles
+        for (MeshTriangle meshTri : scene.meshTris)
         {
-            //Viewport transformation
-            tri.v0 = Vector3f(scene.screenWidth / 2.0 * (tri.v0.x() + 1.0), scene.screenHeight / 2.0 * (tri.v0.y() + 1.0), tri.v0.z());
-            tri.v1 = Vector3f(scene.screenWidth / 2.0 * (tri.v1.x() + 1.0), scene.screenHeight / 2.0 * (tri.v1.y() + 1.0), tri.v1.z());
-            tri.v2 = Vector3f(scene.screenWidth / 2.0 * (tri.v2.x() + 1.0), scene.screenHeight / 2.0 * (tri.v2.y() + 1.0), tri.v2.z());
-            
-            std::vector <int> rangeX{ 0,0 };
-            std::vector <int> rangeY{ 0,0 };
-            rangeX[0] = std::min(std::min(tri.v0.x(), tri.v1.x()), tri.v2.x());
-            rangeX[1] = std::max(std::max(tri.v0.x(), tri.v1.x()), tri.v2.x());
-            rangeY[0] = std::min(std::min(tri.v0.y(), tri.v1.y()), tri.v2.y());
-            rangeY[1] = std::max(std::max(tri.v0.y(), tri.v1.y()), tri.v2.y());
-
-            for (unsigned i = rangeX[0]; i <= rangeX[1]; i++)
+            if (meshTri.isObject == true)
             {
-                for (unsigned j = rangeY[0]; j <= rangeY[1]; j++)
+                scene.rotate(meshTri, scene.rotateAngle);
+            }
+            
+            scene.viewTransform(meshTri, eyePosition);
+            scene.projectTransform(meshTri);
+            //for one projected meshtriangle,get all triangles belong to it
+            for (Triangle& tri : meshTri.triangles)
+            {
+                //Viewport transformation
+                tri.v0 = Vector3f(scene.screenWidth / 2.0 * (tri.v0.x() + 1.0), scene.screenHeight / 2.0 * (tri.v0.y() + 1.0), tri.v0.z());
+                tri.v1 = Vector3f(scene.screenWidth / 2.0 * (tri.v1.x() + 1.0), scene.screenHeight / 2.0 * (tri.v1.y() + 1.0), tri.v1.z());
+                tri.v2 = Vector3f(scene.screenWidth / 2.0 * (tri.v2.x() + 1.0), scene.screenHeight / 2.0 * (tri.v2.y() + 1.0), tri.v2.z());
+
+                std::vector <int> rangeX{ 0,0 };
+                std::vector <int> rangeY{ 0,0 };
+                rangeX[0] = std::min(std::min(tri.v0.x(), tri.v1.x()), tri.v2.x());
+                rangeX[1] = std::max(std::max(tri.v0.x(), tri.v1.x()), tri.v2.x());
+                rangeY[0] = std::min(std::min(tri.v0.y(), tri.v1.y()), tri.v2.y());
+                rangeY[1] = std::max(std::max(tri.v0.y(), tri.v1.y()), tri.v2.y());
+
+                for (unsigned i = rangeX[0]; i <= rangeX[1]; i++)
                 {
-                    if(insideTriangle(i+0.5, j+0.5, tri))
+                    for (unsigned j = rangeY[0]; j <= rangeY[1]; j++)
                     {
-                        unsigned index = j * scene.screenWidth + i;
-                        frameBuffer[index] = 255.0 * tri.m->Kd;
+                        if (insideTriangle(i + 0.5, j + 0.5, tri))
+                        {
+                            unsigned index = j * scene.screenWidth + i;
+                            frameBuffer[index] = 255.0 * tri.m->Kd;
+                        }
                     }
                 }
             }
         }
-    }
 
-    int key = 0;
-    while (key != 27)  //esc
-    {
         cv::Mat image(scene.screenWidth, scene.screenHeight, CV_32FC3, frameBuffer.data());
         image.convertTo(image, CV_8UC3, 1.0f);
         cv::cvtColor(image, image, cv::COLOR_RGB2BGR);
         cv::imshow("image", image);
         key = cv::waitKey(10);
+        if (key == 'a')
+            scene.rotateAngle -= 10;
+        else if (key == 'd')
+            scene.rotateAngle += 10;
     }
 }
 
-void Renderer::pathTracingRender(const Scene& scene)
+void Renderer::pathTracingRender(Scene& scene)
 {
+    for (MeshTriangle* meshTri : scene.objects)
+    {
+        if (meshTri->isObject == true)
+            scene.rotate(*meshTri, scene.rotateAngle);
+    }
+    
     std::vector<Vector3f> framebuffer(scene.screenWidth * scene.screenHeight);
 
     //scene cornellBox center at coordinates origin,camera set on z aies look at -z

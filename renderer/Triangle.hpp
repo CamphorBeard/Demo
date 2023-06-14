@@ -100,6 +100,37 @@ public:
     }
 };
 
+struct AxisAlignedBoundingBox
+{
+    Vector3f pointMin{ INFINITY,INFINITY,INFINITY };
+    Vector3f pointMax{ 0.0,0.0,0.0 };
+
+    void clearAABB()
+    {
+        pointMin = Vector3f{ INFINITY,INFINITY,INFINITY };
+        pointMax = Vector3f{ 0.0,0.0,0.0 };
+    }
+
+    void updateAABB(const Vector3f& v)
+    {
+        pointMin = Vector3f(std::min(pointMin.x(), v.x()), std::min(pointMin.y(), v.y()), std::min(pointMin.z(), v.z()));
+        pointMax = Vector3f(std::max(pointMax.x(), v.x()), std::max(pointMax.y(), v.y()), std::max(pointMax.z(), v.z()));
+    }
+
+    void updateAABB(const Triangle& tri)
+    {
+        float xMin = std::min(std::min(tri.v0.x(), tri.v1.x()), tri.v2.x());
+        float yMin = std::min(std::min(tri.v0.y(), tri.v1.y()), tri.v2.y());
+        float zMin = std::min(std::min(tri.v0.z(), tri.v1.z()), tri.v2.z());
+        float xMax = std::max(std::max(tri.v0.x(), tri.v1.x()), tri.v2.x());
+        float yMax = std::max(std::max(tri.v0.y(), tri.v1.y()), tri.v2.y());
+        float zMax = std::max(std::max(tri.v0.z(), tri.v1.z()), tri.v2.z());
+
+        pointMin = Vector3f(std::min(pointMin.x(), xMin), std::min(pointMin.y(), yMin), std::min(pointMin.z(), zMin));
+        pointMax = Vector3f(std::max(pointMax.x(), xMax), std::max(pointMax.y(), yMax), std::max(pointMax.z(), zMax));
+    }
+};
+
 class MeshTriangle : public Object
 {
 public:
@@ -107,6 +138,8 @@ public:
     std::vector<Triangle> triangles;
     float area = 0;
     Material* m;
+    AxisAlignedBoundingBox AABB;
+    bool isObject = false;
 
     //Bounds3 bounding_box;
     //BVHAccel* bvh;
@@ -119,7 +152,10 @@ public:
         numTriangles = numTris;
 
         for(int i=0;i<numTris*3;i=i+3)
+        {
             triangles.emplace_back(Triangle(verts[i], verts[i + 1], verts[i + 2], mt));
+            AABB.updateAABB(Triangle(verts[i], verts[i + 1], verts[i + 2], mt));
+        }
         
         for (auto& tri : triangles)
         {

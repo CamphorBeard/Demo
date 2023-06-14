@@ -11,6 +11,7 @@ void scale(MeshTriangle& meshTri, float nx, float ny, float nz)
         0, 0, 0, 1;
 
     meshTri.area = 0;  //scale would change triangle's area
+    meshTri.AABB.clearAABB();
     for(unsigned i=0;i<meshTri.numTriangles;i++)
     {
         Vector3f v0, v1, v2;
@@ -20,10 +21,11 @@ void scale(MeshTriangle& meshTri, float nx, float ny, float nz)
         Triangle triTemp(v0, v1, v2, meshTri.m);
         meshTri.triangles[i]= triTemp;
         meshTri.area += triTemp.area;
+        meshTri.AABB.updateAABB(triTemp);
     }
 }
 
-void rotate(MeshTriangle& meshTri, float angle)
+void Scene::rotate(MeshTriangle& meshTri, float angle)
 {
     angle = angle * M_PI / 180.f;
     Eigen::Matrix4f rotateMatrix;
@@ -33,6 +35,7 @@ void rotate(MeshTriangle& meshTri, float angle)
         -sin(angle), 0, cos(angle), 0,
         0, 0, 0, 1;
 
+    meshTri.AABB.clearAABB();
     for (unsigned i = 0; i < meshTri.numTriangles; i++)
     {
         Vector3f v0, v1, v2;
@@ -41,6 +44,7 @@ void rotate(MeshTriangle& meshTri, float angle)
         v2 = vec4ToVec3(rotateMatrix * vec3ToVec4(meshTri.triangles[i].v2));
         Triangle triTemp(v0, v1, v2, meshTri.m);
         meshTri.triangles[i] = triTemp;
+        meshTri.AABB.updateAABB(triTemp);
     }
 }
 
@@ -53,6 +57,7 @@ void translate(MeshTriangle& meshTri, float tx, float ty, float tz)
         0, 0, 1, tz,
         0, 0, 0, 1;
 
+    meshTri.AABB.clearAABB();
     for (unsigned i = 0; i < meshTri.numTriangles; i++)
     {
         Vector3f v0, v1, v2;
@@ -61,6 +66,7 @@ void translate(MeshTriangle& meshTri, float tx, float ty, float tz)
         v2 = vec4ToVec3(translateMatrix * vec3ToVec4(meshTri.triangles[i].v2));
         Triangle triTemp(v0, v1, v2, meshTri.m);
         meshTri.triangles[i] = triTemp;
+        meshTri.AABB.updateAABB(triTemp);
     }
 }
 
@@ -144,21 +150,22 @@ void Scene::addCornellBox(MeshTriangle& box)
     meshTris.push_back(box);
 }
 
-void Scene::addObjectInBox(MeshTriangle& object, boundingBox& bbx)
+void Scene::addObjectInBox(MeshTriangle& object)
 {
+    object.isObject = true;
     //move object to origin where box setted
-    translate(object, -(bbx.pointMin.x() + bbx.pointMax.x()) / 2,
-                      -(bbx.pointMin.y() + bbx.pointMax.y()) / 2,
-                      -(bbx.pointMin.z() + bbx.pointMax.z()) / 2);
+    translate(object, -(object.AABB.pointMin.x() + object.AABB.pointMax.x()) / 2,
+                      -(object.AABB.pointMin.y() + object.AABB.pointMax.y()) / 2,
+                      -(object.AABB.pointMin.z() + object.AABB.pointMax.z()) / 2);
 
     //scale object to suitable size
-    float longestLength = std::max(std::max(bbx.pointMax.x() - bbx.pointMin.x(), bbx.pointMax.y() - bbx.pointMin.y()),
-                                   bbx.pointMax.z() - bbx.pointMin.z());
+    float longestLength = std::max(std::max(object.AABB.pointMax.x() - object.AABB.pointMin.x(), object.AABB.pointMax.y() - object.AABB.pointMin.y()),
+                                   object.AABB.pointMax.z() - object.AABB.pointMin.z());
     float n = (1.0 / (longestLength / 2.0)) * (boxSize / 2.0) * ratioObjectBox;
     scale(object, n, n, n);
 
     //move object to box floor
-    float distanceToFloor = (boxSize / 2.0) - ((bbx.pointMax.y() - bbx.pointMin.y()) / 2.0) * n;
+    float distanceToFloor = (boxSize / 2.0) - ((object.AABB.pointMax.y() - object.AABB.pointMin.y()) / 2.0);
     translate(object, 0, -distanceToFloor, 0);
     objects.push_back(&object);
     meshTris.push_back(object);

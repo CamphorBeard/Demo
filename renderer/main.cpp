@@ -50,23 +50,16 @@ int main(int argc, const char** argv)
         Loader.LoadFile(std::string(argv[1]));  //E:/models/cornellbox/shortbox.obj
         std::vector<Vector3f> vertsObject;
         unsigned triNumber = 0;
-        boundingBox bbx;
         for (auto mesh : Loader.LoadedMeshes)  //iterate all object meshes
         {
             triNumber += mesh.Vertices.size() / 3;  //only fit for triangle mesh
             for (int i = 0; i < mesh.Vertices.size(); i++)  //iterate all mesh vertices
             {
                 vertsObject.push_back(Vector3f(mesh.Vertices[i].Position.X, mesh.Vertices[i].Position.Y, mesh.Vertices[i].Position.Z));
-                bbx.pointMin = Vector3f(std::min(bbx.pointMin.x(), mesh.Vertices[i].Position.X),
-                                        std::min(bbx.pointMin.y(), mesh.Vertices[i].Position.Y),
-                                        std::min(bbx.pointMin.z(), mesh.Vertices[i].Position.Z));
-                bbx.pointMax = Vector3f(std::max(bbx.pointMax.x(), mesh.Vertices[i].Position.X),
-                                        std::max(bbx.pointMax.y(), mesh.Vertices[i].Position.Y),
-                                        std::max(bbx.pointMax.z(), mesh.Vertices[i].Position.Z));
             }
         }
         inputObject = MeshTriangle(vertsObject, triNumber, objectMaterial);
-        scene.addObjectInBox(inputObject, bbx);
+        scene.addObjectInBox(inputObject);
     }
 
     Renderer renderer;
