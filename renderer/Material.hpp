@@ -16,7 +16,7 @@ public:
     inline Vector3f getEmission(){ return m_emission; }
     inline bool hasEmission()
     {
-        if (m_emission.norm() > EPSILON)
+        if (m_emission.norm() > 0.00001)
             return true;
         else
             return false;

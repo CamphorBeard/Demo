@@ -1,7 +1,6 @@
 #include "Scene.hpp"
-#include <iostream>
 
-void scale(MeshTriangle& meshTri, float nx, float ny, float nz)
+void Scene::scale(MeshTriangle& meshTri, float nx, float ny, float nz)
 {
     Eigen::Matrix4f scaleMatrix;
     scaleMatrix <<
@@ -48,7 +47,7 @@ void Scene::rotate(MeshTriangle& meshTri, float angle)
     }
 }
 
-void translate(MeshTriangle& meshTri, float tx, float ty, float tz)
+void Scene::translate(MeshTriangle& meshTri, float tx, float ty, float tz)
 {
     Eigen::Matrix4f translateMatrix;
     translateMatrix <<
@@ -70,7 +69,7 @@ void translate(MeshTriangle& meshTri, float tx, float ty, float tz)
     }
 }
 
-void Scene::viewTransform(MeshTriangle& meshTri, Vector3f eyePosition)
+void Scene::viewTransform(MeshTriangle& meshTri)
 {
     Eigen::Matrix4f viewTransformMatrix;
     viewTransformMatrix <<
@@ -139,15 +138,15 @@ void Scene::addLight(MeshTriangle& light)
 {
     scale(light, boxSize / 2.0 / 5.0, 1, boxSize / 2.0 / 5.0);
     translate(light, 0, boxSize / 2.0 - 2.0, 0);
-    objects.push_back(&light);
-    meshTris.push_back(light);
+    
+    meshTris.push_back(&light);
 }
 
 void Scene::addCornellBox(MeshTriangle& box)
 {
     scale(box, boxSize / 2.0, boxSize / 2.0, boxSize / 2.0);
-    objects.push_back(&box);
-    meshTris.push_back(box);
+    
+    meshTris.push_back(&box);
 }
 
 void Scene::addObjectInBox(MeshTriangle& object)
@@ -159,37 +158,26 @@ void Scene::addObjectInBox(MeshTriangle& object)
                       -(object.AABB.pointMin.z() + object.AABB.pointMax.z()) / 2);
 
     //scale object to suitable size
-    float longestLength = std::max(std::max(object.AABB.pointMax.x() - object.AABB.pointMin.x(), object.AABB.pointMax.y() - object.AABB.pointMin.y()),
-                                   object.AABB.pointMax.z() - object.AABB.pointMin.z());
+    float longestLength = std::max(std::max(object.AABB.pointMax.x() - object.AABB.pointMin.x(), 
+                                            object.AABB.pointMax.y() - object.AABB.pointMin.y()),
+                                            object.AABB.pointMax.z() - object.AABB.pointMin.z());
     float n = (1.0 / (longestLength / 2.0)) * (boxSize / 2.0) * ratioObjectBox;
     scale(object, n, n, n);
 
     //move object to box floor
     float distanceToFloor = (boxSize / 2.0) - ((object.AABB.pointMax.y() - object.AABB.pointMin.y()) / 2.0);
     translate(object, 0, -distanceToFloor, 0);
-    objects.push_back(&object);
-    meshTris.push_back(object);
+    
+    meshTris.push_back(&object);
 }
-
-//void Scene::buildBVH() 
-//{
-//    printf(" - Generating BVH...\n\n");
-//    //this->bvh = new BVHAccel(objects, 1, BVHAccel::SplitMethod::NAIVE);
-//}
-
-//Intersection Scene::intersectBVH(const Ray &ray) const
-//{
-//    //return this->bvh->Intersect(ray);
-//    return Intersection();
-//}
 
 void Scene::sampleLight(Intersection &pos, float &pdf) const
 {
-    for (uint32_t k = 0; k < objects.size(); ++k)
+    for (uint32_t k = 0; k < meshTris.size(); ++k)
     {
-        if (objects[k]->hasEmit())
+        if (meshTris[k]->hasEmit())
         {
-            objects[k]->Sample(pos, pdf);
+            meshTris[k]->Sample(pos, pdf);
             break;
         }
     }
@@ -199,9 +187,9 @@ Intersection Scene::getIntersection(const Ray& ray) const
 {
     Intersection intersection;
     double distance = INFINITY;
-    for (const auto& object : objects)
+    for (const auto& meshTri : meshTris)
     {
-        Intersection intersectionTemp = object->getIntersection(ray);
+        Intersection intersectionTemp = meshTri->getIntersection(ray);
         if (intersectionTemp.happened==true&&intersectionTemp.distance < distance)
         {
             intersection = intersectionTemp;

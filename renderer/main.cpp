@@ -22,10 +22,9 @@ int main(int argc, const char** argv)
     Material* light = new Material(Vector3f(47.8348f, 38.5664f, 31.0808f));
     light->Kd = Vector3f(0.65f, 0.65f, 0.65f);
 
-    //cornellBox scene
     Vector3f v0{ 1,1,1 }, v1{ -1,1,1 }, v2{ -1,1,-1 }, v3{ 1,1,-1 },
              v4{ 1,-1,1 }, v5{ -1,-1,1 }, v6{ -1,-1,-1 }, v7{ 1,-1,-1 };
-
+    //cornellBox
     std::vector<Vector3f> vertsFloor{ v0, v2, v3, v0, v1, v2,    //top
                                       v4, v7, v6, v4, v6, v5,    //bottom
                                       v2, v7, v3, v2, v6, v7 };  //back
@@ -37,11 +36,10 @@ int main(int argc, const char** argv)
     std::vector<Vector3f> vertsLight{ v0, v2, v3, v0, v1, v2 };
     MeshTriangle meshLight(vertsLight, 2, light);
 
-    //scene.addLight(meshLight);
+    scene.addLight(meshLight);
     scene.addCornellBox(left);
     scene.addCornellBox(right);
     scene.addCornellBox(floor);
-    scene.addLight(meshLight);
 
     MeshTriangle inputObject;  //solve Debug Error: abort() has been called
     if (argc >= 2)  //using command line add object
@@ -50,22 +48,18 @@ int main(int argc, const char** argv)
         Loader.LoadFile(std::string(argv[1]));  //E:/models/cornellbox/shortbox.obj
         std::vector<Vector3f> vertsObject;
         unsigned triNumber = 0;
-        for (auto mesh : Loader.LoadedMeshes)  //iterate all object meshes
+        for (auto mesh : Loader.LoadedMeshes)
         {
             triNumber += mesh.Vertices.size() / 3;  //only fit for triangle mesh
-            for (int i = 0; i < mesh.Vertices.size(); i++)  //iterate all mesh vertices
-            {
+            for (int i = 0; i < mesh.Vertices.size(); i++)
                 vertsObject.push_back(Vector3f(mesh.Vertices[i].Position.X, mesh.Vertices[i].Position.Y, mesh.Vertices[i].Position.Z));
-            }
         }
         inputObject = MeshTriangle(vertsObject, triNumber, objectMaterial);
         scene.addObjectInBox(inputObject);
     }
 
     Renderer renderer;
-
     renderer.rasterizationRender(scene);
-
     auto start = std::chrono::system_clock::now();
     renderer.pathTracingRender(scene);
     auto stop = std::chrono::system_clock::now();

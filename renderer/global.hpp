@@ -6,7 +6,6 @@
 #undef M_PI
 #define M_PI 3.141592653589793f
 
-extern const float  EPSILON;
 const float kInfinity = std::numeric_limits<float>::max();
 
 inline Eigen::Vector4f vec3ToVec4(Eigen::Vector3f v) { return Eigen::Vector4f(v.x(), v.y(), v.z(), 1.0f); }
