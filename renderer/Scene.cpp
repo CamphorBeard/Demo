@@ -94,8 +94,8 @@ void Scene::projectTransform(MeshTriangle& meshTri)
     Eigen::Matrix4f projectMatrix = Eigen::Matrix4f::Identity();
 
     float near = -0.1;
-    float far = -((boxSize / 2.0) / tan(fov / 2.0) + boxSize) - 5;
-    float top = near * tan(fov / 2.0);  //?
+    float far = -(eyeToBoxFront + boxSize) - 5;
+    float top = near * tan(fov / 2.0);  //output image origin at left top corner
     float bottom = -top;
     float right = -top * screenWidth / screenHeight;
     float left = -right;
@@ -118,7 +118,7 @@ void Scene::projectTransform(MeshTriangle& meshTri)
     orthoScale <<
         2 / (right - left), 0, 0, 0,
         0, 2 / (top - bottom), 0, 0,
-        0, 0, 2 / (near - far), 0,
+        0, 0, 1, 0,  //2 / (near - far)  z value not scale as depth
         0, 0, 0, 1;
 
     projectMatrix = orthoScale * orthoTranslate * perspToOrtho;
@@ -169,6 +169,11 @@ void Scene::addObjectInBox(MeshTriangle& object)
     translate(object, 0, -distanceToFloor, 0);
     
     meshTris.push_back(&object);
+}
+
+Vector3f Scene::shading(Vector3f p)
+{
+    return Vector3f(0.0, 0.0, 0.0);  //RGB
 }
 
 void Scene::sampleLight(Intersection &pos, float &pdf) const
