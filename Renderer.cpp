@@ -24,8 +24,22 @@ Vector3f getBarycentricCoordinates(float x, float y, const Triangle& tri)
     Eigen::Vector2f v0{ tri.v0.x(),tri.v0.y() }, v1{ tri.v1.x(),tri.v1.y() }, v2{ tri.v2.x(),tri.v2.y() };
     float alpha = (0.5 * crossProductValue(p - v1, v2 - v1)) / (0.5 * crossProductValue(v1 - v0, v2 - v0));
     float beta = (0.5 * crossProductValue(p - v2, v0 - v2)) / (0.5 * crossProductValue(v1 - v0, v2 - v0));
-    float gamma= (0.5 * crossProductValue(p - v0, v1 - v0)) / (0.5 * crossProductValue(v1 - v0, v2 - v0));
+    float gamma = (0.5 * crossProductValue(p - v0, v1 - v0)) / (0.5 * crossProductValue(v1 - v0, v2 - v0));
     return Vector3f(alpha, beta, gamma);
+}
+
+Vector3f shading(const Vector3f& lightPosition, const Vector3f& position, const Vector3f& normal, const Vector3f& kd)
+{
+    float lightIntensity = 100000.0f;
+
+    Vector3f PToLight = lightPosition - position;
+    float distance2 = PToLight.dot(PToLight);
+    PToLight = PToLight.normalized();
+
+    Vector3f Diffuse = kd * (lightIntensity / distance2) * std::max(0.0f, normal.dot(PToLight));
+    Vector3f Ambient = kd * 0.3f;
+
+    return (Diffuse + Ambient) * 255.f;
 }
 
 void Renderer::rasterizationRender(Scene& scene)
@@ -50,20 +64,15 @@ void Renderer::rasterizationRender(Scene& scene)
             scene.viewTransform(meshTriTemp);
             scene.projectTransform(meshTriTemp);
 
-            ////Viewport transformation  object out of frustum cause out of range error
-            //scene.translate(meshTriTemp, 1, 1, 0);
-            //scene.scale(meshTriTemp, scene.screenWidth, scene.screenHeight, 1);
+            //Viewport transformation  object out of frustum cause out of range error
+            scene.translate(meshTriTemp, 1, 1, 0);
+            scene.scale(meshTriTemp, scene.screenWidth / 2.0, scene.screenHeight / 2.0, 1);
 
             for (unsigned triIndex = 0; triIndex < meshTriTemp.numTriangles; triIndex++)
             {
                 Triangle projectedTri = meshTriTemp.triangles[triIndex];
                 Triangle originalTri = meshTri->triangles[triIndex];
                 
-                //Viewport transformation
-                projectedTri.v0 = Vector3f((projectedTri.v0.x() + 1) * scene.screenWidth / 2.0, (projectedTri.v0.y() + 1) * scene.screenHeight / 2.0, projectedTri.v0.z());
-                projectedTri.v1 = Vector3f((projectedTri.v1.x() + 1) * scene.screenWidth / 2.0, (projectedTri.v1.y() + 1) * scene.screenHeight / 2.0, projectedTri.v1.z());
-                projectedTri.v2 = Vector3f((projectedTri.v2.x() + 1) * scene.screenWidth / 2.0, (projectedTri.v2.y() + 1) * scene.screenHeight / 2.0, projectedTri.v2.z());
-
                 //perspective projected triangle's aies alian bounding box
                 std::vector <int> rangeX{ 0,0 };
                 std::vector <int> rangeY{ 0,0 };
@@ -89,56 +98,19 @@ void Renderer::rasterizationRender(Scene& scene)
                             {
                                 depthBuffer[index] = zInterpolation;
 
-                                //Vector3f coordInterpolation = (baryCoord.x() * originalTri.v0 / originalTri.v0.z() +
-                                //                               baryCoord.y() * originalTri.v1 / originalTri.v1.z() +
-                                //                               baryCoord.z() * originalTri.v2 / originalTri.v1.z()) /
-                                //                               (1 / zInterpolation);
-
-                                frameBuffer[index] = 255.0 * projectedTri.m->Kd;
+                                Vector3f lightPosition{ 0, scene.boxSize / 2.0f, 0 };
+                                Vector3f ijPosition = (baryCoord[0] * originalTri.v0 / projectedTri.v0.z() +
+                                                       baryCoord[1] * originalTri.v1 / projectedTri.v1.z() +
+                                                       baryCoord[2] * originalTri.v2 / projectedTri.v2.z()) / (1 / zInterpolation);
+                                Vector3f normal = originalTri.normal;
+                                Vector3f kd = originalTri.m->Kd;
+                                
+                                frameBuffer[index] = shading(lightPosition, ijPosition, normal, kd);
                             }
                         }
                     }
                 }
             }
-
-            //for (Triangle& tri : meshTriTemp.triangles)
-            //{
-            //    //Viewport transformation
-            //    tri.v0 = Vector3f(scene.screenWidth / 2.0 * (tri.v0.x() + 1.0), scene.screenHeight / 2.0 * (tri.v0.y() + 1.0), tri.v0.z());
-            //    tri.v1 = Vector3f(scene.screenWidth / 2.0 * (tri.v1.x() + 1.0), scene.screenHeight / 2.0 * (tri.v1.y() + 1.0), tri.v1.z());
-            //    tri.v2 = Vector3f(scene.screenWidth / 2.0 * (tri.v2.x() + 1.0), scene.screenHeight / 2.0 * (tri.v2.y() + 1.0), tri.v2.z());
-            //
-            //    //perspective projected triangle's aies alian bounding box
-            //    std::vector <int> rangeX{ 0,0 };
-            //    std::vector <int> rangeY{ 0,0 };
-            //    rangeX[0] = std::min(std::min(tri.v0.x(), tri.v1.x()), tri.v2.x());
-            //    rangeX[1] = std::max(std::max(tri.v0.x(), tri.v1.x()), tri.v2.x());
-            //    rangeY[0] = std::min(std::min(tri.v0.y(), tri.v1.y()), tri.v2.y());
-            //    rangeY[1] = std::max(std::max(tri.v0.y(), tri.v1.y()), tri.v2.y());
-            //
-            //    for (unsigned i = rangeX[0]; i <= rangeX[1]; i++)
-            //    {
-            //        for (unsigned j = rangeY[0]; j <= rangeY[1]; j++)
-            //        {
-            //            if (insideTriangle(i + 0.5, j + 0.5, tri))
-            //            {
-            //                Vector3f baryCoord = getBarycentricCoordinates(i + 0.5, j + 0.5, tri);
-            //
-            //                float zInterpolation = 1 / (baryCoord.x() / tri.v0.z() + baryCoord.y() / tri.v1.z() + baryCoord.z() / tri.v2.z());
-            //
-            //                unsigned index = j * scene.screenWidth + i;
-            //                if (depthBuffer[index] > zInterpolation)
-            //                {
-            //                    depthBuffer[index] = zInterpolation;
-            //
-            //
-            //                    frameBuffer[index] = 255.0 * tri.m->Kd;
-            //                }
-            //            }
-            //        }
-            //    }
-            //}
-
         }
 
         cv::Mat image(scene.screenWidth, scene.screenHeight, CV_32FC3, frameBuffer.data());
@@ -155,11 +127,11 @@ void Renderer::rasterizationRender(Scene& scene)
 
 void Renderer::pathTracingRender(Scene& scene)
 {
-    //for (MeshTriangle* meshTri : scene.meshTris)
-    //{
-    //    if (meshTri->isObject == true)
-    //        scene.rotate(*meshTri, scene.rotateAngle);
-    //}
+    for (MeshTriangle* meshTri : scene.meshTris)
+    {
+        if (meshTri->isObject == true)
+            scene.rotate(*meshTri, scene.rotateAngle);
+    }
     
     std::vector<Vector3f> framebuffer(scene.screenWidth * scene.screenHeight);
 
