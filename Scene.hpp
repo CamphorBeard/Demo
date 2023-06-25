@@ -35,12 +35,11 @@ public:
     void addObjectInBox(MeshTriangle& object);
 
     void scale(MeshTriangle& meshTri, float nx, float ny, float nz);
-    void rotate(MeshTriangle& meshTri, float angle);  //rotate around y aies
+    void rotate(MeshTriangle& meshTri, float angle, bool updateBVH);  //rotate around y aies
     void translate(MeshTriangle& meshTri, float tx, float ty, float tz);
 
     void viewTransform(MeshTriangle& meshTri);
     void projectTransform(MeshTriangle& meshTri);
-    Vector3f shading(Vector3f p);
 
     void sampleLight(Intersection& pos, float& pdf) const;
     Intersection getIntersection(const Ray& ray) const;

@@ -4,7 +4,7 @@
 
 #include "Ray.hpp"
 #include "Intersection.hpp"
-//#include "Bounds3.hpp"
+#include "Bounds3.hpp"
 
 class Object
 {
@@ -15,10 +15,9 @@ public:
     virtual bool intersectOrNot(const Ray& ray) = 0;
     virtual Intersection getIntersection(const Ray& ray) = 0;
 
-    //sample on object's area uniformly,using for sample light
     virtual void Sample(Intersection& pos, float& pdf) = 0;
 
-    //virtual Bounds3 getBounds()=0;
+    virtual Bounds3 getBounds()=0;
     virtual bool hasEmit() = 0;
     virtual float getArea()=0;
 };

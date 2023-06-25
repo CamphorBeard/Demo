@@ -47,6 +47,7 @@ void Renderer::rasterizationRender(Scene& scene)
     std::vector<Vector3f> frameBuffer(scene.screenWidth * scene.screenHeight);
     std::vector<float> depthBuffer(scene.screenWidth * scene.screenHeight);
     
+    float angle = 0.0f;
     int key = 0;
     while (key != 27)  //esc
     {
@@ -58,8 +59,8 @@ void Renderer::rasterizationRender(Scene& scene)
         for (MeshTriangle* meshTri : scene.meshTris)
         {
             MeshTriangle meshTriTemp = *meshTri;
-            if (meshTriTemp.isObject == true)
-                scene.rotate(meshTriTemp, scene.rotateAngle);
+            if (!meshTriTemp.isCornellBox)
+                scene.rotate(meshTriTemp, angle, false);
             
             scene.viewTransform(meshTriTemp);
             scene.projectTransform(meshTriTemp);
@@ -119,23 +120,24 @@ void Renderer::rasterizationRender(Scene& scene)
         cv::imshow("image", image);
         key = cv::waitKey(10);
         if (key == 'a')
-            scene.rotateAngle -= 10;
+            angle -= 10;
         else if (key == 'd')
-            scene.rotateAngle += 10;
+            angle += 10;
     }
+    scene.rotateAngle = angle;
 }
 
 void Renderer::pathTracingRender(Scene& scene)
 {
     for (MeshTriangle* meshTri : scene.meshTris)
     {
-        if (meshTri->isObject == true)
-            scene.rotate(*meshTri, scene.rotateAngle);
+        if (!meshTri->isCornellBox)
+            scene.rotate(*meshTri, scene.rotateAngle, true);
     }
     
     std::vector<Vector3f> framebuffer(scene.screenWidth * scene.screenHeight);
 
-    int spp = 1;  // change the spp value to change sample ammount
+    int spp = 3;  // change the spp value to change sample ammount
     //std::cout << "SPP: " << spp << "\n";
     int m = 0;
     for (uint32_t j = 0; j < scene.screenHeight; ++j)

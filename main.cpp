@@ -17,10 +17,10 @@ int main(int argc, const char** argv)
     green->Kd = Vector3f(0.14f, 0.45f, 0.091f);
     Material* white = new Material(Vector3f(0.0f, 0.0f, 0.0f));
     white->Kd = Vector3f(0.725f, 0.71f, 0.68f);
-    Material* objectMaterial = new Material(Vector3f(0.0f, 0.0f, 0.0f));
-    objectMaterial->Kd = Vector3f(0.35f, 0.39f, 1.0f);
     Material* light = new Material(Vector3f(47.8348f, 38.5664f, 31.0808f));
     light->Kd = Vector3f(0.65f, 0.65f, 0.65f);
+    Material* objectMaterial = new Material(Vector3f(0.0f, 0.0f, 0.0f));
+    objectMaterial->Kd = Vector3f(0.35f, 0.39f, 1.0f);
 
     Vector3f v0{ 1,1,1 }, v1{ -1,1,1 }, v2{ -1,1,-1 }, v3{ 1,1,-1 },
              v4{ 1,-1,1 }, v5{ -1,-1,1 }, v6{ -1,-1,-1 }, v7{ 1,-1,-1 };
@@ -42,7 +42,7 @@ int main(int argc, const char** argv)
     scene.addCornellBox(floor);
 
     MeshTriangle inputObject;  //solve Debug Error: abort() has been called
-    if (argc >= 2)  //using command line add object
+    if (argc >= 2)
     {
         objl::Loader Loader;
         Loader.LoadFile(std::string(argv[1]));  //E:/models/cornellbox/shortbox.obj
@@ -55,6 +55,8 @@ int main(int argc, const char** argv)
                 vertsObject.push_back(Vector3f(mesh.Vertices[i].Position.X, mesh.Vertices[i].Position.Y, mesh.Vertices[i].Position.Z));
         }
         inputObject = MeshTriangle(vertsObject, triNumber, objectMaterial);
+        inputObject.isCornellBox = false;
+        inputObject.buildBVH();
         scene.addObjectInBox(inputObject);
     }
 
