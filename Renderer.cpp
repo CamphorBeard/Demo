@@ -1,13 +1,15 @@
 #define _CRT_SECURE_NO_WARNINGS
 #include <Eigen>
 #include <opencv2/opencv.hpp>
+#include <thread>
+#include <mutex>
 #include <fstream>
 #include <ctime>
 #include "Renderer.hpp"
 
 using Eigen::Vector3f;
 
-float crossProductValue(Eigen::Vector2f u, Eigen::Vector2f v) { return (u.x() * v.y() - u.y() * v.x()); }
+inline float crossProductValue(Eigen::Vector2f u, Eigen::Vector2f v) { return (u.x() * v.y() - u.y() * v.x()); }
 
 bool insideTriangle(float x, float y, const Triangle& tri)
 {
@@ -70,6 +72,10 @@ void Renderer::rasterizationRender(Scene& scene)
             {
                 Triangle projectedTri = meshTriTemp.triangles[triIndex];
                 Triangle originalTri = meshTri->triangles[triIndex];
+
+                Vector3f lightPosition{ 0, scene.boxSize / 2.0f, 0 };
+                float lightIntensity = scene.boxSize * 100000.0f / 550.0f;
+                Vector3f color = shading(lightPosition, lightIntensity, originalTri.v0, originalTri.normal, originalTri.m->Kd);
                 
                 //perspective projected triangle's axis aligned bounding box
                 std::vector <int> rangeX{ 0,0 };
@@ -96,15 +102,20 @@ void Renderer::rasterizationRender(Scene& scene)
                             {
                                 depthBuffer[index] = zInterpolation;
 
-                                Vector3f lightPosition{ 0, scene.boxSize / 2.0f, 0 };
-                                float lightIntensity = scene.boxSize * 100000.0f / 550.0f;
-                                Vector3f ijPosition = (baryCoord[0] * originalTri.v0 / projectedTri.v0.z() +
-                                                       baryCoord[1] * originalTri.v1 / projectedTri.v1.z() +
-                                                       baryCoord[2] * originalTri.v2 / projectedTri.v2.z()) / (1 / zInterpolation);
-                                Vector3f normal = originalTri.normal;
-                                Vector3f kd = originalTri.m->Kd;
-                                
-                                frameBuffer[index] = shading(lightPosition, lightIntensity, ijPosition, normal, kd);
+                                if(!meshTri->isCornellBox)
+                                    frameBuffer[index] = color;
+                                else
+                                {
+                                    Vector3f lightPosition{ 0, scene.boxSize / 2.0f, 0 };
+                                    float lightIntensity = scene.boxSize * 100000.0f / 550.0f;
+                                    Vector3f ijPosition = (baryCoord[0] * originalTri.v0 / projectedTri.v0.z() +
+                                                           baryCoord[1] * originalTri.v1 / projectedTri.v1.z() +
+                                                           baryCoord[2] * originalTri.v2 / projectedTri.v2.z()) / (1 / zInterpolation);
+                                    Vector3f normal = originalTri.normal;
+                                    Vector3f kd = originalTri.m->Kd;
+
+                                    frameBuffer[index] = shading(lightPosition, lightIntensity, ijPosition, normal, kd);
+                                }
                             }
                         }
                     }
@@ -141,28 +152,75 @@ void Renderer::pathTracingRender(Scene& scene)
 
     std::vector<Vector3f> framebuffer(scene.screenWidth * scene.screenHeight);
 
-    int spp = 3;  // change the spp value to change sample ammount
+    int spp = 6;  // change the spp value to change sample ammount
     std::cout << "SPP: " << spp << "\n";
-    int m = 0;
-    for (uint32_t j = 0; j < scene.screenHeight; ++j)
-    {
-        for (uint32_t i = 0; i < scene.screenWidth; ++i)
-        {
-            // generate primary ray direction,get different diffuse directions at same intersection
-            float x = scene.eyePosition.x() - scene.screenWidth / 2.0 + i + 0.5;
-            float y = scene.eyePosition.y() + scene.screenHeight / 2.0 - j - 0.5;
-            float z = scene.eyePosition.z() - scene.eyeToScreen;
 
-            Vector3f ijPosition{ x,y,z };  //screen pixel(i,j)'s coordinates
-            Vector3f dir = (ijPosition - scene.eyePosition).normalized();
-            
-            framebuffer[m] = Vector3f(0.0f, 0.0f, 0.0f);
-            for (int k = 0; k < spp; k++)
-                framebuffer[m] += scene.pathTracing(Ray(scene.eyePosition, dir)) / spp;  //average each sample's radiance
-            m++;
+    //multiThreads
+    const unsigned threadsNum = 20;
+    int rows = scene.screenHeight / threadsNum;
+    std::thread threads[threadsNum];
+    
+    unsigned count = 0;
+    std::mutex mtx;
+    auto threadFunc = [&](unsigned jMin, unsigned jMax)
+    {
+        for (uint32_t j = jMin; j < jMax; j++)
+        {
+            for (uint32_t i = 0; i < scene.screenWidth; i++)
+            {
+                // generate primary ray direction,get different diffuse directions at same intersection
+                float x = scene.eyePosition.x() - scene.screenWidth / 2.0 + i + 0.5;
+                float y = scene.eyePosition.y() + scene.screenHeight / 2.0 - j - 0.5;
+                float z = scene.eyePosition.z() - scene.eyeToScreen;
+
+                Vector3f ijPosition{ x,y,z };  //screen pixel(i,j)'s coordinates
+                Vector3f dir = (ijPosition - scene.eyePosition).normalized();
+
+                unsigned index = j * scene.screenWidth + i;
+                framebuffer[index] = Vector3f(0.0f, 0.0f, 0.0f);
+                for (int k = 0; k < spp; k++)
+                    framebuffer[index] += scene.pathTracing(Ray(scene.eyePosition, dir)) / spp;  //average each sample's radiance
+            }
+            mtx.lock();
+            count++;
+            UpdateProgress((float)count / (float)(rows * threadsNum));
+            mtx.unlock();
         }
-        UpdateProgress(j / (float)scene.screenHeight);
+    };
+    
+    for (unsigned k = 0; k < threadsNum; k++) 
+    {
+        threads[k] = std::thread(threadFunc, k * rows, (k + 1) * rows);
     }
+    for (unsigned k = 0; k < threadsNum; k++) 
+    {
+        threads[k].join();
+    }
+
+    ////without multiThread
+    ////int m = 0;
+    //for (uint32_t j = 0; j < scene.screenHeight; ++j)
+    //{
+    //    for (uint32_t i = 0; i < scene.screenWidth; ++i)
+    //    {
+    //        // generate primary ray direction,get different diffuse directions at same intersection
+    //        float x = scene.eyePosition.x() - scene.screenWidth / 2.0 + i + 0.5;
+    //        float y = scene.eyePosition.y() + scene.screenHeight / 2.0 - j - 0.5;
+    //        float z = scene.eyePosition.z() - scene.eyeToScreen;
+
+    //        Vector3f ijPosition{ x,y,z };  //screen pixel(i,j)'s coordinates
+    //        Vector3f dir = (ijPosition - scene.eyePosition).normalized();
+    //        
+    //        unsigned index = j * scene.screenWidth + i;
+
+    //        framebuffer[index] = Vector3f(0.0f, 0.0f, 0.0f);  //?
+    //        for (int k = 0; k < spp; k++)
+    //            framebuffer[index] += scene.pathTracing(Ray(scene.eyePosition, dir)) / spp;  //average each sample's radiance
+    //        //m++;
+    //    }
+    //    UpdateProgress(j / (float)scene.screenHeight);
+    //}
+
     UpdateProgress(1.f);
 
     // save framebuffer to file

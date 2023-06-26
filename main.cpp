@@ -8,19 +8,19 @@ using Eigen::Vector3f;
 
 int main(int argc, const char** argv)
 {
-    Scene scene(350, 350);
+    Scene scene(500, 500);
 
     Material* red = new Material(Vector3f(0.0f, 0.0f, 0.0f));
     red->Kd = Vector3f(0.63f, 0.065f, 0.05f);
     Material* green = new Material(Vector3f(0.0f, 0.0f, 0.0f));
     green->Kd = Vector3f(0.14f, 0.45f, 0.091f);
+    Material* blue = new Material(Vector3f(0.0f, 0.0f, 0.0f));
+    blue->Kd = Vector3f(0.35f, 0.39f, 1.0f);
     Material* white = new Material(Vector3f(0.0f, 0.0f, 0.0f));
     white->Kd = Vector3f(0.725f, 0.71f, 0.68f);
     Material* light = new Material(Vector3f(47.8348f, 38.5664f, 31.0808f));
     light->Kd = Vector3f(0.65f, 0.65f, 0.65f);
-    Material* objectMaterial = new Material(Vector3f(0.0f, 0.0f, 0.0f));
-    objectMaterial->Kd = Vector3f(0.35f, 0.39f, 1.0f);
-
+    
     Vector3f v0{ 1,1,1 }, v1{ -1,1,1 }, v2{ -1,1,-1 }, v3{ 1,1,-1 },
              v4{ 1,-1,1 }, v5{ -1,-1,1 }, v6{ -1,-1,-1 }, v7{ 1,-1,-1 };
     //cornellBox
@@ -53,7 +53,7 @@ int main(int argc, const char** argv)
             for (int i = 0; i < mesh.Vertices.size(); i++)
                 vertsObject.push_back(Vector3f(mesh.Vertices[i].Position.X, mesh.Vertices[i].Position.Y, mesh.Vertices[i].Position.Z));
         }
-        inputObject = MeshTriangle(vertsObject, triNumber, objectMaterial);
+        inputObject = MeshTriangle(vertsObject, triNumber, white);
         inputObject.isCornellBox = false;
         scene.addObjectInBox(inputObject);
     }
