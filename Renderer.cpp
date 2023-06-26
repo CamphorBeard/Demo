@@ -162,7 +162,7 @@ void Renderer::pathTracingRender(Scene& scene)
     UpdateProgress(1.f);
 
     // save framebuffer to file
-    FILE* fp = fopen("outputHDR.ppm", "wb");
+    FILE* fp = fopen("output.ppm", "wb");
     (void)fprintf(fp, "P6\n%d %d\n255\n", scene.screenWidth, scene.screenHeight);
     for (auto i = 0; i < scene.screenHeight * scene.screenWidth; ++i)
     {
@@ -174,17 +174,20 @@ void Renderer::pathTracingRender(Scene& scene)
     }
     fclose(fp);
 
-    for (unsigned i = 0; i < framebuffer.size(); i++)
-        framebuffer[i] = framebuffer[i] * 255.0f;
+    //for (unsigned i = 0; i < framebuffer.size(); i++)
+    //    framebuffer[i] = framebuffer[i] * 255.0f;
+    //std::string filename = "outputRGB.ppm";
     int key = 0;
-    std::string filename = "outputRGB.ppm";
     while (key != 27)  //esc
     {
-        cv::Mat image(scene.screenWidth, scene.screenHeight, CV_32FC3, framebuffer.data());
-        image.convertTo(image, CV_8UC3, 1.0f);
-        cv::cvtColor(image, image, cv::COLOR_RGB2BGR);
+        //cv::Mat image(scene.screenWidth, scene.screenHeight, CV_32FC3, framebuffer.data());
+        //image.convertTo(image, CV_8UC3, 1.0f);
+        //cv::cvtColor(image, image, cv::COLOR_RGB2BGR);
+
+        cv::Mat image = cv::imread("output.ppm");
+
         cv::imshow("image", image);
-        cv::imwrite(filename, image);
+        //cv::imwrite(filename, image);
         key = cv::waitKey(10);
     }
 }
