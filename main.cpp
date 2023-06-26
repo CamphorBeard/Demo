@@ -2,7 +2,6 @@
 #include "Scene.hpp"
 #include "Triangle.hpp"
 #include "OBJ_Loader.hpp"
-#include <chrono>
 #include <Eigen>
 
 using Eigen::Vector3f;
@@ -56,20 +55,12 @@ int main(int argc, const char** argv)
         }
         inputObject = MeshTriangle(vertsObject, triNumber, objectMaterial);
         inputObject.isCornellBox = false;
-        inputObject.buildBVH();
         scene.addObjectInBox(inputObject);
     }
 
     Renderer renderer;
     renderer.rasterizationRender(scene);
-
-    auto start = std::chrono::system_clock::now();
     renderer.pathTracingRender(scene);
-    auto stop = std::chrono::system_clock::now();
-    std::cout << "Render complete: \n";
-    std::cout << "Time taken: " << std::chrono::duration_cast<std::chrono::hours>(stop - start).count() << " hours\n";
-    std::cout << "          : " << std::chrono::duration_cast<std::chrono::minutes>(stop - start).count() << " minutes\n";
-    std::cout << "          : " << std::chrono::duration_cast<std::chrono::seconds>(stop - start).count() << " seconds\n";
 
     return 0;
 }

@@ -10,6 +10,7 @@ void Scene::scale(MeshTriangle& meshTri, float nx, float ny, float nz)
         0, 0, 0, 1;
 
     meshTri.area = 0;  //scale would change triangle's area
+    meshTri.AABB.clear();
     for(unsigned i=0;i<meshTri.numTriangles;i++)
     {
         Vector3f v0, v1, v2;
@@ -19,12 +20,14 @@ void Scene::scale(MeshTriangle& meshTri, float nx, float ny, float nz)
         Triangle triTemp(v0, v1, v2, meshTri.m);
         meshTri.triangles[i]= triTemp;
         meshTri.area += triTemp.area;
+
+        meshTri.AABB.update(v0);
+        meshTri.AABB.update(v1);
+        meshTri.AABB.update(v2);
     }
-    if (!meshTri.isCornellBox)
-        meshTri.buildBVH();
 }
 
-void Scene::rotate(MeshTriangle& meshTri, float angle, bool updateBVH)
+void Scene::rotate(MeshTriangle& meshTri, float angle)
 {
     angle = angle * M_PI / 180.f;
     Eigen::Matrix4f rotateMatrix;
@@ -34,6 +37,7 @@ void Scene::rotate(MeshTriangle& meshTri, float angle, bool updateBVH)
         -sin(angle), 0, cos(angle), 0,
         0, 0, 0, 1;
 
+    meshTri.AABB.clear();
     for (unsigned i = 0; i < meshTri.numTriangles; i++)
     {
         Vector3f v0, v1, v2;
@@ -42,9 +46,11 @@ void Scene::rotate(MeshTriangle& meshTri, float angle, bool updateBVH)
         v2 = vec4ToVec3(rotateMatrix * vec3ToVec4(meshTri.triangles[i].v2));
         Triangle triTemp(v0, v1, v2, meshTri.m);
         meshTri.triangles[i] = triTemp;
+
+        meshTri.AABB.update(v0);
+        meshTri.AABB.update(v1);
+        meshTri.AABB.update(v2);
     }
-    if ((!meshTri.isCornellBox) && updateBVH)
-        meshTri.buildBVH();
 }
 
 void Scene::translate(MeshTriangle& meshTri, float tx, float ty, float tz)
@@ -56,6 +62,7 @@ void Scene::translate(MeshTriangle& meshTri, float tx, float ty, float tz)
         0, 0, 1, tz,
         0, 0, 0, 1;
 
+    meshTri.AABB.clear();
     for (unsigned i = 0; i < meshTri.numTriangles; i++)
     {
         Vector3f v0, v1, v2;
@@ -64,9 +71,11 @@ void Scene::translate(MeshTriangle& meshTri, float tx, float ty, float tz)
         v2 = vec4ToVec3(translateMatrix * vec3ToVec4(meshTri.triangles[i].v2));
         Triangle triTemp(v0, v1, v2, meshTri.m);
         meshTri.triangles[i] = triTemp;
+
+        meshTri.AABB.update(v0);
+        meshTri.AABB.update(v1);
+        meshTri.AABB.update(v2);
     }
-    if (!meshTri.isCornellBox)
-        meshTri.buildBVH();
 }
 
 void Scene::viewTransform(MeshTriangle& meshTri)

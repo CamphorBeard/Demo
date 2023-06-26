@@ -2,6 +2,7 @@
 #include <Eigen>
 #include <opencv2/opencv.hpp>
 #include <fstream>
+#include <ctime>
 #include "Renderer.hpp"
 
 using Eigen::Vector3f;
@@ -28,10 +29,8 @@ Vector3f getBarycentricCoordinates(float x, float y, const Triangle& tri)
     return Vector3f(alpha, beta, gamma);
 }
 
-Vector3f shading(const Vector3f& lightPosition, const Vector3f& position, const Vector3f& normal, const Vector3f& kd)
+Vector3f shading(const Vector3f& lightPosition, float lightIntensity, const Vector3f& position, const Vector3f& normal, const Vector3f& kd)
 {
-    float lightIntensity = 100000.0f;
-
     Vector3f PToLight = lightPosition - position;
     float distance2 = PToLight.dot(PToLight);
     PToLight = PToLight.normalized();
@@ -51,21 +50,19 @@ void Renderer::rasterizationRender(Scene& scene)
     int key = 0;
     while (key != 27)  //esc
     {
-        for (unsigned i = 0; i < frameBuffer.size(); i++)
-            frameBuffer[i] = Vector3f(0.0, 0.0, 0.0);
-        for (unsigned i = 0; i < frameBuffer.size(); i++)
+        for (unsigned i = 0; i < depthBuffer.size(); i++)
             depthBuffer[i] = INFINITY;
         
         for (MeshTriangle* meshTri : scene.meshTris)
         {
             MeshTriangle meshTriTemp = *meshTri;
             if (!meshTriTemp.isCornellBox)
-                scene.rotate(meshTriTemp, angle, false);
+                scene.rotate(meshTriTemp, angle);
             
             scene.viewTransform(meshTriTemp);
             scene.projectTransform(meshTriTemp);
 
-            //Viewport transformation  object out of frustum cause out of range error
+            //Viewport transformation
             scene.translate(meshTriTemp, 1, 1, 0);
             scene.scale(meshTriTemp, scene.screenWidth / 2.0, scene.screenHeight / 2.0, 1);
 
@@ -74,7 +71,7 @@ void Renderer::rasterizationRender(Scene& scene)
                 Triangle projectedTri = meshTriTemp.triangles[triIndex];
                 Triangle originalTri = meshTri->triangles[triIndex];
                 
-                //perspective projected triangle's aies alian bounding box
+                //perspective projected triangle's axis aligned bounding box
                 std::vector <int> rangeX{ 0,0 };
                 std::vector <int> rangeY{ 0,0 };
                 rangeX[0] = std::min(std::min(projectedTri.v0.x(), projectedTri.v1.x()), projectedTri.v2.x());
@@ -100,13 +97,14 @@ void Renderer::rasterizationRender(Scene& scene)
                                 depthBuffer[index] = zInterpolation;
 
                                 Vector3f lightPosition{ 0, scene.boxSize / 2.0f, 0 };
+                                float lightIntensity = scene.boxSize * 100000.0f / 550.0f;
                                 Vector3f ijPosition = (baryCoord[0] * originalTri.v0 / projectedTri.v0.z() +
                                                        baryCoord[1] * originalTri.v1 / projectedTri.v1.z() +
                                                        baryCoord[2] * originalTri.v2 / projectedTri.v2.z()) / (1 / zInterpolation);
                                 Vector3f normal = originalTri.normal;
                                 Vector3f kd = originalTri.m->Kd;
                                 
-                                frameBuffer[index] = shading(lightPosition, ijPosition, normal, kd);
+                                frameBuffer[index] = shading(lightPosition, lightIntensity, ijPosition, normal, kd);
                             }
                         }
                     }
@@ -132,13 +130,19 @@ void Renderer::pathTracingRender(Scene& scene)
     for (MeshTriangle* meshTri : scene.meshTris)
     {
         if (!meshTri->isCornellBox)
-            scene.rotate(*meshTri, scene.rotateAngle, true);
+        {
+            scene.rotate(*meshTri, scene.rotateAngle);
+            meshTri->buildBVH();
+        }
     }
     
+    time_t start, stop;
+    time(&start);
+
     std::vector<Vector3f> framebuffer(scene.screenWidth * scene.screenHeight);
 
     int spp = 3;  // change the spp value to change sample ammount
-    //std::cout << "SPP: " << spp << "\n";
+    std::cout << "SPP: " << spp << "\n";
     int m = 0;
     for (uint32_t j = 0; j < scene.screenHeight; ++j)
     {
@@ -174,20 +178,18 @@ void Renderer::pathTracingRender(Scene& scene)
     }
     fclose(fp);
 
-    //for (unsigned i = 0; i < framebuffer.size(); i++)
-    //    framebuffer[i] = framebuffer[i] * 255.0f;
-    //std::string filename = "outputRGB.ppm";
+    time(&stop);
+    double diff = difftime(stop, start);
+    int hrs = (int)diff / 3600;
+    int mins = ((int)diff / 60) - (hrs * 60);
+    int secs = (int)diff - (hrs * 3600) - (mins * 60);
+    printf("\nRender complete: \nTime Taken: %i hours, %i minutes, %i seconds\n\n", hrs, mins, secs);
+
     int key = 0;
     while (key != 27)  //esc
     {
-        //cv::Mat image(scene.screenWidth, scene.screenHeight, CV_32FC3, framebuffer.data());
-        //image.convertTo(image, CV_8UC3, 1.0f);
-        //cv::cvtColor(image, image, cv::COLOR_RGB2BGR);
-
         cv::Mat image = cv::imread("output.ppm");
-
         cv::imshow("image", image);
-        //cv::imwrite(filename, image);
         key = cv::waitKey(10);
     }
 }

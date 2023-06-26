@@ -2,9 +2,19 @@
 
 BVHAccel::BVHAccel(std::vector<Object*> p) : primitives(std::move(p))
 {
+    time_t start, stop;
+    time(&start);
+
     if (primitives.empty())
         return;
     root = recursiveBuild(primitives);
+
+    time(&stop);
+    double diff = difftime(stop, start);
+    int hrs = (int)diff / 3600;
+    int mins = ((int)diff / 60) - (hrs * 60);
+    int secs = (int)diff - (hrs * 3600) - (mins * 60);
+    printf("\nBVH Generation complete: \nTime Taken: %i hours, %i minutes, %i seconds\n\n", hrs, mins, secs);
 }
 
 BVHBuildNode* BVHAccel::recursiveBuild(std::vector<Object*> objects)

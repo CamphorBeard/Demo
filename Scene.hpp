@@ -17,7 +17,7 @@ public:
     std::vector<MeshTriangle* > meshTris;  //save scene aka object in box
 
     float boxSize = 550.0;  //cornellBox boxSize * boxSize
-    float ratioObjectBox = 0.5;  //object AABB longest length / boxSize
+    float ratioObjectBox = 0.7;  //object AABB longest length / boxSize
     float rotateAngle = 0.0;
 
     //cornellBox center at coordinates'origin,camera set on z aies look at -z
@@ -35,7 +35,7 @@ public:
     void addObjectInBox(MeshTriangle& object);
 
     void scale(MeshTriangle& meshTri, float nx, float ny, float nz);
-    void rotate(MeshTriangle& meshTri, float angle, bool updateBVH);  //rotate around y aies
+    void rotate(MeshTriangle& meshTri, float angle);  //rotate around y axis
     void translate(MeshTriangle& meshTri, float tx, float ty, float tz);
 
     void viewTransform(MeshTriangle& meshTri);

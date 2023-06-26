@@ -32,7 +32,7 @@ public:
     
     Intersection Intersect(const Ray &ray) const;
     
-//private:
+private:
     std::vector<Object*> primitives;
     BVHBuildNode* root;
 

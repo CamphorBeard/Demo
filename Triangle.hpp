@@ -114,6 +114,10 @@ public:
             Triangle triTemp{ verts[i], verts[i + 1], verts[i + 2], material };
             triangles.emplace_back(triTemp);
             area = area + triTemp.area;
+
+            AABB.update(verts[i]);
+            AABB.update(verts[i + 1]);
+            AABB.update(verts[i + 2]);
         }
     }
 
@@ -121,15 +125,10 @@ public:
     {
         if (!isCornellBox)
         {
-            AABB.clear();
             std::vector<Object*> ptrs;
             for (auto& tri : triangles)
-            {
-                AABB.update(tri.v0);
-                AABB.update(tri.v1);
-                AABB.update(tri.v2);
                 ptrs.push_back(&tri);
-            }
+            
             BVH = new BVHAccel(ptrs);
         }
     }
