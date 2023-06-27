@@ -8,7 +8,7 @@ using Eigen::Vector3f;
 
 int main(int argc, const char** argv)
 {
-    Scene scene(500, 500);
+    Scene scene(800, 800);
 
     Material* red = new Material(Vector3f(0.0f, 0.0f, 0.0f));
     red->Kd = Vector3f(0.63f, 0.065f, 0.05f);

@@ -185,7 +185,7 @@ public:
 
     void Sample(Intersection &pos, float &pdf)
     {
-        unsigned index = get_random_float(numTriangles);
+        unsigned index = get_random_float((float)numTriangles - 0.001f);  //solve out of range error
         triangles[index].Sample(pos, pdf);
         pos.obj = this;
         pdf = 1.0f / area;
