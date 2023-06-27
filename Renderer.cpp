@@ -47,20 +47,16 @@ void Renderer::rasterizationRender(Scene& scene)
 {
     std::vector<Vector3f> frameBuffer(scene.screenWidth * scene.screenHeight);
     std::vector<float> depthBuffer(scene.screenWidth * scene.screenHeight);
-    
-    float angle = 0.0f;
-    int key = 0;
-    while (key != 27)  //esc
+    for (unsigned i = 0; i < depthBuffer.size(); i++)
+        depthBuffer[i] = INFINITY;
+
+    std::vector<Vector3f> background(scene.screenWidth * scene.screenHeight);
+    for (MeshTriangle* meshTri : scene.meshTris)
     {
-        for (unsigned i = 0; i < depthBuffer.size(); i++)
-            depthBuffer[i] = INFINITY;
-        
-        for (MeshTriangle* meshTri : scene.meshTris)
+        if (meshTri->isCornellBox)
         {
             MeshTriangle meshTriTemp = *meshTri;
-            if (!meshTriTemp.isCornellBox)
-                scene.rotate(meshTriTemp, angle);
-            
+
             scene.viewTransform(meshTriTemp);
             scene.projectTransform(meshTriTemp);
 
@@ -73,10 +69,6 @@ void Renderer::rasterizationRender(Scene& scene)
                 Triangle projectedTri = meshTriTemp.triangles[triIndex];
                 Triangle originalTri = meshTri->triangles[triIndex];
 
-                Vector3f lightPosition{ 0, scene.boxSize / 2.0f, 0 };
-                float lightIntensity = scene.boxSize * 100000.0f / 550.0f;
-                Vector3f color = shading(lightPosition, lightIntensity, originalTri.v0, originalTri.normal, originalTri.m->Kd);
-                
                 //perspective projected triangle's axis aligned bounding box
                 std::vector <int> rangeX{ 0,0 };
                 std::vector <int> rangeY{ 0,0 };
@@ -102,19 +94,79 @@ void Renderer::rasterizationRender(Scene& scene)
                             {
                                 depthBuffer[index] = zInterpolation;
 
-                                if(!meshTri->isCornellBox)
-                                    frameBuffer[index] = color;
-                                else
-                                {
-                                    Vector3f lightPosition{ 0, scene.boxSize / 2.0f, 0 };
-                                    float lightIntensity = scene.boxSize * 100000.0f / 550.0f;
-                                    Vector3f ijPosition = (baryCoord[0] * originalTri.v0 / projectedTri.v0.z() +
-                                                           baryCoord[1] * originalTri.v1 / projectedTri.v1.z() +
-                                                           baryCoord[2] * originalTri.v2 / projectedTri.v2.z()) / (1 / zInterpolation);
-                                    Vector3f normal = originalTri.normal;
-                                    Vector3f kd = originalTri.m->Kd;
+                                Vector3f lightPosition{ 0, scene.boxSize / 2.0f, 0 };
+                                float lightIntensity = scene.boxSize * 100000.0f / 550.0f;
+                                Vector3f ijPosition = (baryCoord[0] * originalTri.v0 / projectedTri.v0.z() +
+                                                       baryCoord[1] * originalTri.v1 / projectedTri.v1.z() +
+                                                       baryCoord[2] * originalTri.v2 / projectedTri.v2.z()) / (1 / zInterpolation);
+                                Vector3f normal = originalTri.normal;
+                                Vector3f kd = originalTri.m->Kd;
 
-                                    frameBuffer[index] = shading(lightPosition, lightIntensity, ijPosition, normal, kd);
+                                background[index] = shading(lightPosition, lightIntensity, ijPosition, normal, kd);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    float angle = 0.0f;
+    int key = 0;
+    while (key != 27)  //esc
+    {
+        for (unsigned i = 0; i < frameBuffer.size(); i++)
+            frameBuffer[i] = background[i];
+        for (unsigned i = 0; i < depthBuffer.size(); i++)
+            depthBuffer[i] = INFINITY;
+        
+        for (MeshTriangle* meshTri : scene.meshTris)
+        {
+            if (!meshTri->isCornellBox)
+            {
+                MeshTriangle meshTriTemp = *meshTri;
+                scene.rotate(meshTriTemp, angle);
+                scene.viewTransform(meshTriTemp);
+                scene.projectTransform(meshTriTemp);
+
+                //Viewport transformation
+                scene.translate(meshTriTemp, 1, 1, 0);
+                scene.scale(meshTriTemp, scene.screenWidth / 2.0, scene.screenHeight / 2.0, 1);
+
+                for (unsigned triIndex = 0; triIndex < meshTriTemp.numTriangles; triIndex++)
+                {
+                    Triangle projectedTri = meshTriTemp.triangles[triIndex];
+                    Triangle originalTri = meshTri->triangles[triIndex];
+
+                    Vector3f lightPosition{ 0, scene.boxSize / 2.0f, 0 };
+                    float lightIntensity = scene.boxSize * 100000.0f / 550.0f;
+                    Vector3f color = shading(lightPosition, lightIntensity, originalTri.v0, originalTri.normal, originalTri.m->Kd);
+
+                    //perspective projected triangle's axis aligned bounding box
+                    std::vector <int> rangeX{ 0,0 };
+                    std::vector <int> rangeY{ 0,0 };
+                    rangeX[0] = std::min(std::min(projectedTri.v0.x(), projectedTri.v1.x()), projectedTri.v2.x());
+                    rangeX[1] = std::max(std::max(projectedTri.v0.x(), projectedTri.v1.x()), projectedTri.v2.x());
+                    rangeY[0] = std::min(std::min(projectedTri.v0.y(), projectedTri.v1.y()), projectedTri.v2.y());
+                    rangeY[1] = std::max(std::max(projectedTri.v0.y(), projectedTri.v1.y()), projectedTri.v2.y());
+
+                    for (unsigned i = rangeX[0]; i <= rangeX[1]; i++)
+                    {
+                        for (unsigned j = rangeY[0]; j <= rangeY[1]; j++)
+                        {
+                            if (insideTriangle(i + 0.5, j + 0.5, projectedTri))
+                            {
+                                Vector3f baryCoord = getBarycentricCoordinates(i + 0.5, j + 0.5, projectedTri);
+
+                                float zInterpolation = 1 / (baryCoord.x() / projectedTri.v0.z() +
+                                                            baryCoord.y() / projectedTri.v1.z() +
+                                                            baryCoord.z() / projectedTri.v2.z());
+
+                                unsigned index = j * scene.screenWidth + i;
+                                if (depthBuffer[index] > zInterpolation)
+                                {
+                                    depthBuffer[index] = zInterpolation;
+                                    frameBuffer[index] = color;
                                 }
                             }
                         }
@@ -207,12 +259,12 @@ void Renderer::pathTracingRender(Scene& scene)
     //        float x = scene.eyePosition.x() - scene.screenWidth / 2.0 + i + 0.5;
     //        float y = scene.eyePosition.y() + scene.screenHeight / 2.0 - j - 0.5;
     //        float z = scene.eyePosition.z() - scene.eyeToScreen;
-
+    //
     //        Vector3f ijPosition{ x,y,z };  //screen pixel(i,j)'s coordinates
     //        Vector3f dir = (ijPosition - scene.eyePosition).normalized();
     //        
     //        unsigned index = j * scene.screenWidth + i;
-
+    //
     //        framebuffer[index] = Vector3f(0.0f, 0.0f, 0.0f);  //?
     //        for (int k = 0; k < spp; k++)
     //            framebuffer[index] += scene.pathTracing(Ray(scene.eyePosition, dir)) / spp;  //average each sample's radiance
