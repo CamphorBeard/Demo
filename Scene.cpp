@@ -37,7 +37,7 @@ void Scene::rotate(MeshTriangle& meshTri, float angle)
         -sin(angle), 0, cos(angle), 0,
         0, 0, 0, 1;
 
-    meshTri.AABB.clear();
+    //meshTri.AABB.clear();
     for (unsigned i = 0; i < meshTri.numTriangles; i++)
     {
         Vector3f v0, v1, v2;
@@ -47,9 +47,9 @@ void Scene::rotate(MeshTriangle& meshTri, float angle)
         Triangle triTemp(v0, v1, v2, meshTri.m);
         meshTri.triangles[i] = triTemp;
 
-        meshTri.AABB.update(v0);
-        meshTri.AABB.update(v1);
-        meshTri.AABB.update(v2);
+        //meshTri.AABB.update(v0);
+        //meshTri.AABB.update(v1);
+        //meshTri.AABB.update(v2);
     }
 }
 

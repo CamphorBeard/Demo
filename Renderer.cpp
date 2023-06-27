@@ -115,8 +115,9 @@ void Renderer::rasterizationRender(Scene& scene)
     int key = 0;
     while (key != 27)  //esc
     {
-        for (unsigned i = 0; i < frameBuffer.size(); i++)
-            frameBuffer[i] = background[i];
+        //for (unsigned i = 0; i < frameBuffer.size(); i++)
+        //    frameBuffer[i] = background[i];
+        frameBuffer = background;
         for (unsigned i = 0; i < depthBuffer.size(); i++)
             depthBuffer[i] = INFINITY;
         
@@ -204,7 +205,7 @@ void Renderer::pathTracingRender(Scene& scene)
 
     std::vector<Vector3f> framebuffer(scene.screenWidth * scene.screenHeight);
 
-    int spp = 6;  // change the spp value to change sample ammount
+    //int spp = 6;  // change the spp value to change sample ammount
     std::cout << "SPP: " << spp << "\n";
 
     //multiThreads

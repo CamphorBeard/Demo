@@ -40,6 +40,8 @@ int main(int argc, const char** argv)
     scene.addCornellBox(right);
     scene.addCornellBox(floor);
 
+    Renderer renderer;
+
     MeshTriangle inputObject;  //solve Debug Error: abort() has been called
     if (argc >= 2)
     {
@@ -56,9 +58,13 @@ int main(int argc, const char** argv)
         inputObject = MeshTriangle(vertsObject, triNumber, white);
         inputObject.isCornellBox = false;
         scene.addObjectInBox(inputObject);
+
+        if (argc == 3) 
+        {
+            renderer.spp = (atoi(argv[2]));
+        }
     }
 
-    Renderer renderer;
     renderer.rasterizationRender(scene);
     renderer.pathTracingRender(scene);
 
