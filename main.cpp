@@ -20,6 +20,7 @@ int main(int argc, const char** argv)
     white->Kd = Vector3f(0.725f, 0.71f, 0.68f);
     Material* light = new Material(Vector3f(47.8348f, 38.5664f, 31.0808f));
     light->Kd = Vector3f(0.65f, 0.65f, 0.65f);
+    light->Kd = light->Kd * 100000.0f;  //turn on light in rasterization
     
     Vector3f v0{ 1,1,1 }, v1{ -1,1,1 }, v2{ -1,1,-1 }, v3{ 1,1,-1 },
              v4{ 1,-1,1 }, v5{ -1,-1,1 }, v6{ -1,-1,-1 }, v7{ 1,-1,-1 };
