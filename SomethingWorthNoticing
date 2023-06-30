@@ -1,0 +1,6 @@
+1.Path tracing output gets shadow on light's right side, could be solved by making light closer to roof(may cause z-fighting in rasterization). But why it's not symmetrical?
+2.Left and right planes'triangle joints don't seem right in rasterization, guessing because interpolation incorrect. Actually barycentric coordinates'gamma can't be calculated by "1-alpha-beta" and perspective correct is different from manual calculating formulas, kind surprised its ouput is fine.
+3.A bright dot pops out on roof in rasterization if choosing a big value(800) as output width and height, guessing because calculation accuracy. But what make this position special?
+4.OpenCV window is bigger than setted output image's size, annoying sometime.
+
+Let's solve those one after another then add some more here.
