@@ -146,7 +146,7 @@ void Scene::projectTransform(MeshTriangle& meshTri)
 void Scene::addLight(MeshTriangle& light)
 {
     scale(light, boxSize / 2.0 / 5.0, 1, boxSize / 2.0 / 5.0);
-    translate(light, 0, boxSize / 2.0 - 2.0, 0);
+    translate(light, 0, -1.0 + boxSize / 2.0 - 0.01, 0);
     
     meshTris.push_back(&light);
 }

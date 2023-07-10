@@ -57,6 +57,9 @@ void Renderer::rasterizationRender(Scene& scene)
         {
             MeshTriangle meshTriTemp = *meshTri;
 
+            if (meshTriTemp.hasEmit()) 
+                scene.translate(meshTriTemp, 0, -0.5, 0);  //avoid z-fighting
+            
             scene.viewTransform(meshTriTemp);
             scene.projectTransform(meshTriTemp);
 
