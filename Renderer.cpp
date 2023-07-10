@@ -182,6 +182,8 @@ void Renderer::rasterizationRender(Scene& scene)
         cv::Mat image(scene.screenWidth, scene.screenHeight, CV_32FC3, frameBuffer.data());
         image.convertTo(image, CV_8UC3, 1.0f);
         cv::cvtColor(image, image, cv::COLOR_RGB2BGR);
+        cv::namedWindow("image", 0);
+        cv::resizeWindow("image", cv::Size(scene.screenWidth * 458.0f / 800.0f, scene.screenHeight * 458.0f / 800.0f));
         cv::imshow("image", image);
         key = cv::waitKey(10);
         if (key == 'a')
@@ -303,6 +305,8 @@ void Renderer::pathTracingRender(Scene& scene)
     while (key != 27)  //esc
     {
         cv::Mat image = cv::imread("output.ppm");
+        cv::namedWindow("image", 0);
+        cv::resizeWindow("image", cv::Size(scene.screenWidth * 458.0f / 800.0f, scene.screenHeight * 458.0f / 800.0f));
         cv::imshow("image", image);
         key = cv::waitKey(10);
     }
